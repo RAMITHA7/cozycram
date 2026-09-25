@@ -1,0 +1,19 @@
+.ui-surface {
+  color: var(--color-text-primary);
+}
+
+.ui-surface--1 {
+  background: var(--color-surface-1);
+}
+
+.ui-surface--2 {
+  background: var(--color-surface-2);
+}
+
+.ui-surface--3 {
+  background: var(--color-surface-3);
+}
+
+.ui-surface--bordered {
+  border: 1px solid var(--color-border-subtle);
+}
