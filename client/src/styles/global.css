@@ -192,10 +192,12 @@ canvas {
   *,
   *::before,
   *::after {
-    scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  html{
+    scroll-behavior: auto !important;
   }
 }
 
@@ -212,5 +214,9 @@ canvas {
     --text-h2: 1.375rem;
     --text-h3: 1.125rem;
   }
+
+  html {
+  scroll-behavior: smooth;
+}
 }
 

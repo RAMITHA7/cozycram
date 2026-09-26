@@ -11,6 +11,7 @@ import PublicLayout from "../layouts/PublicLayout.jsx";
 import SystemLayout from "../layouts/SystemLayout.jsx";
 
 import RoutePlaceholder from "./RoutePlaceholder.jsx";
+import LandingPage from "../features/landing/LandingPage.jsx";
 
 const router = createBrowserRouter([
   {
@@ -18,13 +19,7 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: (
-          <RoutePlaceholder
-            eyebrow="PUBLIC"
-            title="Less panic. Better planning."
-            description="CozyCram's public landing page will be built here."
-          />
-        ),
+        element: <LandingPage />,
       },
     ],
   },
