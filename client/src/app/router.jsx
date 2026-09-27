@@ -14,6 +14,7 @@ import SignupPage from "../features/auth/SignupPage.jsx";
 import ForgotPasswordPage from "../features/auth/ForgotPasswordPage.jsx";
 import ResetPasswordPage from "../features/auth/ResetPasswordPage.jsx";
 import VerifyEmailPage from "../features/auth/VerifyEmailPage.jsx";
+import OnboardingPage from "../features/onboarding/OnboardingPage.jsx";
 
 import RoutePlaceholder from "./RoutePlaceholder.jsx";
 import LandingPage from "../features/landing/LandingPage.jsx";
@@ -60,13 +61,7 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/onboarding",
-        element: (
-          <RoutePlaceholder
-            eyebrow="SETUP"
-            title="Let's build your study setup."
-            description="CozyCram onboarding will be implemented here."
-          />
-        ),
+        element: <OnboardingPage />
       },
     ],
   },
