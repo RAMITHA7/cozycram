@@ -9,6 +9,11 @@ import FocusLayout from "../layouts/FocusLayout.jsx";
 import OnboardingLayout from "../layouts/OnboardingLayout.jsx";
 import PublicLayout from "../layouts/PublicLayout.jsx";
 import SystemLayout from "../layouts/SystemLayout.jsx";
+import LoginPage from "../features/auth/LoginPage.jsx";
+import SignupPage from "../features/auth/SignupPage.jsx";
+import ForgotPasswordPage from "../features/auth/ForgotPasswordPage.jsx";
+import ResetPasswordPage from "../features/auth/ResetPasswordPage.jsx";
+import VerifyEmailPage from "../features/auth/VerifyEmailPage.jsx";
 
 import RoutePlaceholder from "./RoutePlaceholder.jsx";
 import LandingPage from "../features/landing/LandingPage.jsx";
@@ -29,50 +34,23 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/login",
-        element: (
-          <RoutePlaceholder
-            eyebrow="ACCOUNT"
-            title="Welcome back."
-            description="Login will live here."
-          />
-        ),
+        element: <LoginPage />,
       },
       {
         path: "/signup",
-        element: (
-          <RoutePlaceholder
-            eyebrow="ACCOUNT"
-            title="Create your CozyCram account."
-            description="Signup will live here."
-          />
-        ),
+        element: <SignupPage />
       },
       {
         path: "/forgot-password",
-        element: (
-          <RoutePlaceholder
-            eyebrow="ACCOUNT"
-            title="Reset your password."
-          />
-        ),
+        element: <ForgotPasswordPage />
       },
       {
         path: "/reset-password",
-        element: (
-          <RoutePlaceholder
-            eyebrow="ACCOUNT"
-            title="Choose a new password."
-          />
-        ),
+        element: <ResetPasswordPage />
       },
       {
         path: "/verify-email",
-        element: (
-          <RoutePlaceholder
-            eyebrow="ACCOUNT"
-            title="Verify your email."
-          />
-        ),
+        element: <VerifyEmailPage />
       },
     ],
   },
