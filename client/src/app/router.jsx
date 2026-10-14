@@ -15,6 +15,7 @@ import ForgotPasswordPage from "../features/auth/ForgotPasswordPage.jsx";
 import ResetPasswordPage from "../features/auth/ResetPasswordPage.jsx";
 import VerifyEmailPage from "../features/auth/VerifyEmailPage.jsx";
 import OnboardingPage from "../features/onboarding/OnboardingPage.jsx";
+import TodayPage from "../features/today/TodayPage.jsx";
 
 import RoutePlaceholder from "./RoutePlaceholder.jsx";
 import LandingPage from "../features/landing/LandingPage.jsx";
@@ -71,13 +72,7 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/today",
-        element: (
-          <RoutePlaceholder
-            eyebrow="TODAY"
-            title="Good evening."
-            description="Your daily CozyCram command center."
-          />
-        ),
+        element: <TodayPage />
       },
 
       {
