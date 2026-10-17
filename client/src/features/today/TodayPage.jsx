@@ -16,9 +16,11 @@ import {
 
 import "./today.css";
 
+import {
+  loadStudyData,
+} from "../../services/studyDataService.js";
 
-const ONBOARDING_STORAGE_KEY =
-  "cozycram-onboarding";
+
 
 
 const DAY_IDS = [
@@ -31,25 +33,6 @@ const DAY_IDS = [
   "saturday",
 ];
 
-
-const loadOnboardingData = () => {
-  try {
-    const savedValue =
-      localStorage.getItem(
-        ONBOARDING_STORAGE_KEY
-      );
-
-    if (!savedValue) {
-      return null;
-    }
-
-    return JSON.parse(
-      savedValue
-    );
-  } catch {
-    return null;
-  }
-};
 
 
 const getGreeting = () => {
@@ -411,10 +394,17 @@ const getRecommendation = (
 
 
 function TodayPage() {
-  const [onboardingData] =
-    useState(
-      loadOnboardingData
-    );
+ const [initialStudyData] =
+  useState(
+    loadStudyData
+  );
+
+
+const onboardingData =
+  initialStudyData.data;
+
+const loadError =
+  initialStudyData.error;
 
     const [
   showAllDeadlines,
@@ -639,10 +629,11 @@ const maximumSubjectHours =
       </header>
 
 
-      {!onboardingData?.completed ? (
+      {loadError ? (
         <section
           className="today-setup-state"
-          aria-labelledby="today-setup-title"
+          role="alert"
+          aria-labelledby="today-load-error-title"
         >
           <div
             className="today-setup-state__icon"
@@ -655,15 +646,12 @@ const maximumSubjectHours =
           </div>
 
           <div>
-            <h2 id="today-setup-title">
-              Finish setting up CozyCram.
+            <h2 id="today-load-error-title">
+              We couldn't load your study data.
             </h2>
 
             <p>
-              Complete onboarding so Today can
-              use your subjects, workload,
-              availability and study
-              preferences.
+              {loadError}
             </p>
           </div>
 
@@ -671,7 +659,41 @@ const maximumSubjectHours =
             to="/onboarding"
             className="today-primary-link"
           >
-            Continue setup
+            Review setup
+          </Link>
+        </section>
+            ) : !onboardingData?.completed ? (
+        <section
+          className="today-setup-state"
+          aria-labelledby="today-setup-required-title"
+        >
+          <div
+            className="today-setup-state__icon"
+            aria-hidden="true"
+          >
+            <Target
+              size={24}
+              strokeWidth={1.8}
+            />
+          </div>
+
+          <div>
+            <h2 id="today-setup-required-title">
+              Complete your study setup first.
+            </h2>
+
+            <p>
+              Finish onboarding so CozyCram can use
+              your subjects, workload, availability,
+              deadlines and study preferences.
+            </p>
+          </div>
+
+          <Link
+            to="/onboarding"
+            className="today-primary-link"
+          >
+            Complete setup
           </Link>
         </section>
       ) : (

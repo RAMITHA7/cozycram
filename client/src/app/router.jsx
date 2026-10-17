@@ -16,6 +16,8 @@ import ResetPasswordPage from "../features/auth/ResetPasswordPage.jsx";
 import VerifyEmailPage from "../features/auth/VerifyEmailPage.jsx";
 import OnboardingPage from "../features/onboarding/OnboardingPage.jsx";
 import TodayPage from "../features/today/TodayPage.jsx";
+import SubjectsPage from "../features/subjects/SubjectsPage.jsx";
+import SubjectDetailPage from "../features/subjects/SubjectDetailPage.jsx";
 
 import RoutePlaceholder from "./RoutePlaceholder.jsx";
 import LandingPage from "../features/landing/LandingPage.jsx";
@@ -108,22 +110,12 @@ const router = createBrowserRouter([
 
       {
         path: "/planner/subjects",
-        element: (
-          <RoutePlaceholder
-            eyebrow="PLANNER"
-            title="Subjects"
-          />
-        ),
+        element: <SubjectsPage />,
       },
 
       {
         path: "/planner/subjects/:subjectId",
-        element: (
-          <RoutePlaceholder
-            eyebrow="SUBJECT"
-            title="Subject details"
-          />
-        ),
+        element:<SubjectDetailPage />
       },
 
       {

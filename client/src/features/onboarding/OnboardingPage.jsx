@@ -20,6 +20,11 @@ import {
 
 import "./onboarding.css";
 
+import {
+  loadStudyData,
+  saveStudyData,
+} from "../../services/studyDataService.js";
+
 
 const onboardingSteps = [
   "Basic setup",
@@ -30,8 +35,6 @@ const onboardingSteps = [
   "Review",
 ];
 
-const ONBOARDING_STORAGE_KEY =
-  "cozycram-onboarding";
 
 const defaultAvailability = [
   {
@@ -117,39 +120,10 @@ const spacingLabels = {
   flexible: "No preference",
 };
 
-const loadSavedOnboarding = () => {
-  try {
-    const savedValue =
-      localStorage.getItem(
-        ONBOARDING_STORAGE_KEY
-      );
-
-    if (!savedValue) {
-      return {
-        data: null,
-        error: "",
-      };
-    }
-
-    return {
-      data: JSON.parse(
-        savedValue
-      ),
-      error: "",
-    };
-  } catch {
-    return {
-      data: null,
-      error:
-        "Your saved onboarding setup could not be restored.",
-    };
-  }
-};
-
 function OnboardingPage() {
   const [initialSaved] =
     useState(
-      loadSavedOnboarding
+      loadStudyData
     );
 
   const savedOnboarding =
@@ -315,7 +289,9 @@ function OnboardingPage() {
     subjects.length > 0 &&
     subjects.every(
       (subject) =>
-        Number(subject.weeklyHours) > 0
+        Number(
+          subject.weeklyHours
+        ) >= 0.5
     );
 
    const selectedAvailability =
@@ -586,24 +562,27 @@ const handleFinishSetup = () => {
   };
 
 
-  try {
-    localStorage.setItem(
-      ONBOARDING_STORAGE_KEY,
-      JSON.stringify(
-        onboardingData
-      )
-    );
+  const result =
+  saveStudyData(
+    onboardingData
+  );
 
-    setSaveError("");
-    setSetupSaved(true);
-  } catch {
-    setSetupSaved(false);
 
-    setSaveError(
-      "CozyCram could not save your setup in this browser."
-    );
-  }
+if (!result.success) {
+  setSetupSaved(false);
+
+  setSaveError(
+    result.error
+  );
+
+  return;
+}
+
+
+setSaveError("");
+setSetupSaved(true);
 };
+
 
   return (
     <main
