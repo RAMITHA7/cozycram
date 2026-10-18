@@ -211,6 +211,289 @@ const validateSubjects = (
   };
 };
 
+const TASK_PRIORITIES =
+  new Set([
+    "low",
+    "medium",
+    "high",
+  ]);
+
+
+const TASK_STATUSES =
+  new Set([
+    "todo",
+    "done",
+  ]);
+
+
+const validateTasks = (
+  tasks
+) => {
+  if (!Array.isArray(tasks)) {
+    return {
+      valid: false,
+
+      error:
+        "Your saved task list is not valid.",
+    };
+  }
+
+
+  const seenIds =
+    new Set();
+
+
+  for (const task of tasks) {
+    if (
+      !task ||
+      typeof task !== "object" ||
+      Array.isArray(task)
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "One of your saved tasks is not valid.",
+      };
+    }
+
+
+    const taskId =
+      String(
+        task.id ?? ""
+      ).trim();
+
+
+    const title =
+      typeof task.title ===
+      "string"
+        ? task.title.trim()
+        : "";
+
+
+    const subjectId =
+      String(
+        task.subjectId ?? ""
+      ).trim();
+
+
+    const estimatedMinutes =
+      Number(
+        task.estimatedMinutes
+      );
+
+
+    const dueDate =
+      task.dueDate ?? "";
+
+
+    const notes =
+      task.notes ?? "";
+
+
+    if (!taskId) {
+      return {
+        valid: false,
+
+        error:
+          "One of your saved tasks is missing an identifier.",
+      };
+    }
+
+
+    if (
+      seenIds.has(
+        taskId
+      )
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "Your saved task list contains duplicate identifiers.",
+      };
+    }
+
+
+    if (!title) {
+      return {
+        valid: false,
+
+        error:
+          "One of your saved tasks is missing a title.",
+      };
+    }
+
+
+    if (!subjectId) {
+      return {
+        valid: false,
+
+        error:
+          `${title} is not connected to a subject.`,
+      };
+    }
+
+
+    if (
+      !Number.isFinite(
+        estimatedMinutes
+      ) ||
+      estimatedMinutes < 15
+    ) {
+      return {
+        valid: false,
+
+        error:
+          `${title} must have at least 15 minutes of estimated work.`,
+      };
+    }
+
+
+    if (
+      typeof dueDate !==
+        "string" ||
+      !isValidDeadlineDate(
+        dueDate
+      )
+    ) {
+      return {
+        valid: false,
+
+        error:
+          `${title} has an invalid due date.`,
+      };
+    }
+
+
+    if (
+      !TASK_PRIORITIES.has(
+        task.priority
+      )
+    ) {
+      return {
+        valid: false,
+
+        error:
+          `${title} has an invalid priority.`,
+      };
+    }
+
+
+    if (
+      !TASK_STATUSES.has(
+        task.status
+      )
+    ) {
+      return {
+        valid: false,
+
+        error:
+          `${title} has an invalid status.`,
+      };
+    }
+
+
+    if (
+      typeof notes !==
+      "string"
+    ) {
+      return {
+        valid: false,
+
+        error:
+          `${title} has invalid notes.`,
+      };
+    }
+
+
+    if (
+      typeof task.createdAt !==
+        "string" ||
+      Number.isNaN(
+        Date.parse(
+          task.createdAt
+        )
+      )
+    ) {
+      return {
+        valid: false,
+
+        error:
+          `${title} has invalid creation information.`,
+      };
+    }
+
+
+    if (
+      task.completedAt !== null &&
+      task.completedAt !==
+        undefined &&
+      (
+        typeof task.completedAt !==
+          "string" ||
+        Number.isNaN(
+          Date.parse(
+            task.completedAt
+          )
+        )
+      )
+    ) {
+      return {
+        valid: false,
+
+        error:
+          `${title} has invalid completion information.`,
+      };
+    }
+
+    if (
+  task.status === "done" &&
+  (
+    typeof task.completedAt !==
+      "string" ||
+    Number.isNaN(
+      Date.parse(
+        task.completedAt
+      )
+    )
+  )
+) {
+  return {
+    valid: false,
+
+    error:
+      `${title} is marked done but is missing valid completion information.`,
+  };
+}
+
+
+if (
+  task.status === "todo" &&
+  task.completedAt !== null &&
+  task.completedAt !==
+    undefined
+) {
+  return {
+    valid: false,
+
+    error:
+      `${title} has completion information even though it is still marked to do.`,
+  };
+}
+
+    seenIds.add(
+      taskId
+    );
+  }
+
+
+  return {
+    valid: true,
+    error: "",
+  };
+};
+
 
 const validateStudyData = (
   studyData
@@ -232,11 +515,76 @@ const validateStudyData = (
     studyData.subjects !==
     undefined
   ) {
-    return validateSubjects(
-      studyData.subjects
-    );
+    const subjectValidation =
+      validateSubjects(
+        studyData.subjects
+      );
+
+
+    if (
+      !subjectValidation.valid
+    ) {
+      return subjectValidation;
+    }
   }
 
+
+  if (
+    studyData.tasks !==
+    undefined
+  ) {
+    const taskValidation =
+      validateTasks(
+        studyData.tasks
+      );
+
+
+    if (
+      !taskValidation.valid
+    ) {
+      return taskValidation;
+    }
+  }
+
+  if (
+  Array.isArray(
+    studyData.subjects
+  ) &&
+  Array.isArray(
+    studyData.tasks
+  )
+) {
+  const subjectIds =
+    new Set(
+      studyData.subjects.map(
+        (subject) =>
+          String(
+            subject.id
+          )
+      )
+    );
+
+
+  const orphanTask =
+    studyData.tasks.find(
+      (task) =>
+        !subjectIds.has(
+          String(
+            task.subjectId
+          )
+        )
+    );
+
+
+  if (orphanTask) {
+    return {
+      valid: false,
+
+      error:
+        `${orphanTask.title} is connected to a subject that no longer exists.`,
+    };
+  }
+}
 
   return {
     valid: true,
@@ -400,6 +748,71 @@ export const saveSubjects = (
   };
 };
 
+export const saveTasks = (
+  tasks
+) => {
+  const validation =
+    validateTasks(
+      tasks
+    );
+
+
+  if (!validation.valid) {
+    return {
+      success: false,
+
+      error:
+        validation.error,
+    };
+  }
+
+
+  const {
+    data,
+    error,
+  } = loadStudyData();
+
+
+  if (error) {
+    return {
+      success: false,
+      error,
+    };
+  }
+
+
+  if (!data) {
+    return {
+      success: false,
+
+      error:
+        "Complete your CozyCram setup before managing tasks.",
+    };
+  }
+
+
+  const nextData = {
+    ...data,
+
+    tasks,
+  };
+
+
+  const result =
+    saveStudyData(
+      nextData
+    );
+
+
+  return {
+    ...result,
+
+    data:
+      result.success
+        ? nextData
+        : data,
+  };
+};
 
 export {
   STUDY_DATA_KEY,

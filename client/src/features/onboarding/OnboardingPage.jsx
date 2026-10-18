@@ -534,6 +534,16 @@ const updateAvailabilityField = (
 };
 
 const handleFinishSetup = () => {
+  const latestStoredData =
+  loadStudyData();
+
+
+const preservedTasks =
+  Array.isArray(
+    latestStoredData.data?.tasks
+  )
+    ? latestStoredData.data.tasks
+    : [];
   const onboardingData = {
     version: 1,
 
@@ -549,6 +559,9 @@ const handleFinishSetup = () => {
     },
 
     subjects,
+
+    tasks:
+       preservedTasks,
 
     availability,
 

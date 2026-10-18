@@ -267,6 +267,17 @@ const formatDeadlineDistance = (
     return "";
   }
 
+  if (days < 0) {
+  const absoluteDays =
+    Math.abs(days);
+
+
+  return absoluteDays === 1
+    ? "1 day overdue"
+    : `${absoluteDays} days overdue`;
+}
+
+
   if (days === 0) {
     return "due today";
   }
@@ -392,6 +403,98 @@ const getRecommendation = (
   };
 };
 
+const TASK_PRIORITY_WEIGHT = {
+  high: 3,
+  medium: 2,
+  low: 1,
+};
+
+
+const getTaskRecommendation = (
+  tasks
+) => {
+  if (!tasks.length) {
+    return null;
+  }
+
+
+  const tasksWithDueDates =
+    tasks
+      .filter(
+        (task) =>
+          task.dueDate
+      )
+      .sort(
+        (first, second) => {
+          const firstDays =
+            getDaysUntilDeadline(
+              first.dueDate
+            );
+
+          const secondDays =
+            getDaysUntilDeadline(
+              second.dueDate
+            );
+
+
+          if (
+            firstDays !==
+            secondDays
+          ) {
+            return (
+              firstDays -
+              secondDays
+            );
+          }
+
+
+          return (
+            TASK_PRIORITY_WEIGHT[
+              second.priority
+            ] -
+            TASK_PRIORITY_WEIGHT[
+              first.priority
+            ]
+          );
+        }
+      );
+
+
+  if (
+    tasksWithDueDates.length >
+    0
+  ) {
+    return {
+      task:
+        tasksWithDueDates[0],
+
+      reason:
+        "deadline",
+    };
+  }
+
+
+  const priorityTasks =
+    [...tasks].sort(
+      (first, second) =>
+        TASK_PRIORITY_WEIGHT[
+          second.priority
+        ] -
+        TASK_PRIORITY_WEIGHT[
+          first.priority
+        ]
+    );
+
+
+  return {
+    task:
+      priorityTasks[0],
+
+    reason:
+      "priority",
+  };
+};
+
 
 function TodayPage() {
  const [initialStudyData] =
@@ -421,6 +524,21 @@ const loadError =
     )
       ? onboardingData.subjects
       : [];
+
+  const tasks =
+  Array.isArray(
+    onboardingData?.tasks
+  )
+    ? onboardingData.tasks
+    : [];
+
+
+const openTasks =
+  tasks.filter(
+    (task) =>
+      task.status ===
+      "todo"
+  );
 
   const availability =
     Array.isArray(
@@ -506,8 +624,9 @@ const loadError =
  */
 const todayPlan = [];
 
-  const subjectsWithDeadlines =
-    subjects.filter(
+const subjectDeadlineItems =
+  subjects
+    .filter(
       (subject) =>
         subject.deadlineDate &&
         (
@@ -515,20 +634,93 @@ const todayPlan = [];
             subject.deadlineDate
           ) ?? -1
         ) >= 0
+    )
+    .map(
+      (subject) => ({
+        id:
+          `subject-${subject.id}`,
+
+        title:
+          subject.deadlineTitle ||
+          "Upcoming deadline",
+
+        context:
+          subject.name,
+
+        date:
+          subject.deadlineDate,
+
+        type:
+          "subject",
+
+        targetId:
+          subject.id,
+      })
     );
 
 
-  const sortedUpcomingDeadlines =
-  [...subjectsWithDeadlines]
-    .sort(
-      (first, second) =>
-        getDaysUntilDeadline(
-          first.deadlineDate
-        ) -
-        getDaysUntilDeadline(
-          second.deadlineDate
-        )
+const taskDeadlineItems =
+  openTasks
+    .filter(
+      (task) =>
+        task.dueDate &&
+        (
+          getDaysUntilDeadline(
+            task.dueDate
+          ) ?? -1
+        ) >= 0
+    )
+    .map(
+      (task) => {
+        const taskSubject =
+          subjects.find(
+            (subject) =>
+              String(
+                subject.id
+              ) ===
+              String(
+                task.subjectId
+              )
+          );
+
+
+        return {
+          id:
+            `task-${task.id}`,
+
+          title:
+            task.title,
+
+          context:
+            taskSubject?.name ||
+            "Unknown subject",
+
+          date:
+            task.dueDate,
+
+          type:
+            "task",
+
+          targetId:
+            task.id,
+        };
+      }
     );
+
+
+const sortedUpcomingDeadlines =
+  [
+    ...taskDeadlineItems,
+    ...subjectDeadlineItems,
+  ].sort(
+    (first, second) =>
+      getDaysUntilDeadline(
+        first.date
+      ) -
+      getDaysUntilDeadline(
+        second.date
+      )
+  );
 
 
 const visibleUpcomingDeadlines =
@@ -576,14 +768,41 @@ const maximumSubjectHours =
     : 0;
 
 
-  const recommendation =
-    getRecommendation(
-      subjects
-    );
+  const taskRecommendation =
+  getTaskRecommendation(
+    openTasks
+  );
 
 
-  const recommendationSubject =
-    recommendation?.subject;
+const recommendedTask =
+  taskRecommendation?.task;
+
+
+const recommendedTaskSubject =
+  recommendedTask
+    ? subjects.find(
+        (subject) =>
+          String(
+            subject.id
+          ) ===
+          String(
+            recommendedTask.subjectId
+          )
+      )
+    : null;
+
+
+const recommendation =
+  recommendedTask
+    ? null
+    : getRecommendation(
+        subjects
+      );
+
+
+const recommendationSubject =
+  recommendedTaskSubject ||
+  recommendation?.subject;
 
 
   const suggestedFocusMinutes =
@@ -1008,17 +1227,21 @@ const maximumSubjectHours =
                   WHAT SHOULD I STUDY NOW?
                 </p>
 
-                <h2 id="today-recommendation-title">
-                  {recommendationSubject
-                    ? recommendationSubject.name
-                    : "Add a subject to get a recommendation"}
-                </h2>
+               <h2 id="today-recommendation-title">
+  {recommendedTask
+    ? recommendedTask.title
+    : recommendationSubject
+      ? recommendationSubject.name
+      : "Add a subject or task to get a recommendation"}
+</h2>
               </div>
 
 
               {recommendationSubject && (
                 <span className="today-recommendation__badge">
-                  Based on your setup
+                  {recommendedTask
+                      ? "Based on your tasks"
+                      : "Based on your setup"}
                 </span>
               )}
             </div>
@@ -1027,49 +1250,125 @@ const maximumSubjectHours =
             {recommendationSubject ? (
               <>
                 <div className="today-recommendation__details">
-                  <div>
-                    <span>
-                      Suggested session
-                    </span>
+                 {recommendedTask ? (
+  <>
+    <div>
+      <span>
+        Subject
+      </span>
 
-                    <strong>
-                      {
-                        suggestedFocusMinutes
-                      }
-                      {" "}
-                      min
-                    </strong>
-                  </div>
+      <strong>
+        {
+          recommendedTaskSubject
+            ?.name ||
+          "Unknown subject"
+        }
+      </strong>
+    </div>
 
-                  <div>
-                    <span>
-                      Weekly workload
-                    </span>
 
-                    <strong>
-                      {
-                        recommendationSubject.weeklyHours
-                      }
-                      {" "}
-                      h
-                    </strong>
-                  </div>
+    <div>
+      <span>
+        Estimated work
+      </span>
 
-                  {recommendationSubject.deadlineDate && (
-                    <div>
-                      <span>
-                        Deadline
-                      </span>
+      <strong>
+        {
+          formatDuration(
+            recommendedTask
+              .estimatedMinutes
+          )
+        }
+      </strong>
+    </div>
 
-                      <strong>
-                        {
-                          formatDeadlineDistance(
-                            recommendationSubject.deadlineDate
-                          )
-                        }
-                      </strong>
-                    </div>
-                  )}
+
+    <div>
+      <span>
+        Priority
+      </span>
+
+      <strong>
+        {
+          recommendedTask
+            .priority
+            .charAt(0)
+            .toUpperCase() +
+          recommendedTask
+            .priority
+            .slice(1)
+        }
+      </strong>
+    </div>
+
+
+    {recommendedTask.dueDate && (
+      <div>
+        <span>
+          Deadline
+        </span>
+
+        <strong>
+          {
+            formatDeadlineDistance(
+              recommendedTask
+                .dueDate
+            )
+          }
+        </strong>
+      </div>
+    )}
+  </>
+) : (
+  <>
+    <div>
+      <span>
+        Suggested session
+      </span>
+
+      <strong>
+        {suggestedFocusMinutes}
+        {" "}
+        min
+      </strong>
+    </div>
+
+
+    <div>
+      <span>
+        Weekly workload
+      </span>
+
+      <strong>
+        {
+          recommendationSubject
+            .weeklyHours
+        }
+        {" "}
+        h
+      </strong>
+    </div>
+
+
+    {recommendationSubject
+      .deadlineDate && (
+      <div>
+        <span>
+          Deadline
+        </span>
+
+        <strong>
+          {
+            formatDeadlineDistance(
+              recommendationSubject
+                .deadlineDate
+            )
+          }
+        </strong>
+      </div>
+    )}
+  </>
+)}
                 </div>
 
 
@@ -1086,20 +1385,38 @@ const maximumSubjectHours =
     </span>
   </summary>
 
-  <p>
-    {recommendation.reason ===
-    "deadline"
-      ? `${
-          recommendationSubject
-            .deadlineTitle ||
-          "Its next deadline"
-        } is ${formatDeadlineDistance(
-          recommendationSubject
-            .deadlineDate
-        )}, making it your nearest saved deadline.`
-      : `${recommendationSubject.name} has the largest weekly workload in your current setup, so it is the clearest next priority without an upcoming deadline.`}
-  </p>
+    <p>
+  {recommendedTask
+    ? (
+        taskRecommendation.reason ===
+        "deadline"
+          ? `${recommendedTask.title} has the nearest saved deadline among your open tasks.`
+          : `${recommendedTask.title} has the highest priority among your current open tasks without a saved deadline.`
+      )
+    : (
+        recommendation?.reason ===
+        "deadline"
+          ? `${
+              recommendationSubject
+                .deadlineTitle ||
+              "Its next deadline"
+            } is ${formatDeadlineDistance(
+              recommendationSubject
+                .deadlineDate
+            )}, making it your nearest saved subject deadline.`
+          : `${recommendationSubject.name} has the largest weekly workload in your current setup, so it is the clearest next priority without an open task.`
+      )}
+</p>
 </details>
+
+{recommendedTask && (
+  <Link
+    to={`/planner/tasks/${recommendedTask.id}`}
+    className="today-primary-link"
+  >
+    View task
+  </Link>
+)}
 
 
                 {!todayAvailability?.enabled && (
@@ -1274,43 +1591,52 @@ const maximumSubjectHours =
       <>
       <div className="today-deadline-list">
         {visibleUpcomingDeadlines.map(
-          (subject) => (
+          (item) => (
             <div
-              key={subject.id}
-              className="today-deadline-row"
-            >
-              <div className="today-deadline-row__main">
-                <strong>
-                  {
-                    subject.deadlineTitle ||
-                    "Upcoming deadline"
-                  }
-                </strong>
+  key={item.id}
+  className="today-deadline-row"
+>
+  <div className="today-deadline-row__main">
+    <strong>
+      {item.title}
+    </strong>
 
-                <span>
-                  {subject.name}
-                </span>
-              </div>
+    <span>
+      {item.context}
+    </span>
+  </div>
 
 
-              <div className="today-deadline-row__date">
-                <strong>
-                  {
-                    formatDeadlineDate(
-                      subject.deadlineDate
-                    )
-                  }
-                </strong>
+  <div className="today-deadline-row__date">
+    <strong>
+      {
+        formatDeadlineDate(
+          item.date
+        )
+      }
+    </strong>
 
-                <span>
-                  {
-                    formatDeadlineDistance(
-                      subject.deadlineDate
-                    )
-                  }
-                </span>
-              </div>
-            </div>
+    <span>
+      {
+        formatDeadlineDistance(
+          item.date
+        )
+      }
+    </span>
+  </div>
+
+
+  <Link
+    to={
+      item.type === "task"
+        ? `/planner/tasks/${item.targetId}`
+        : `/planner/subjects/${item.targetId}`
+    }
+    className="today-deadline-row__link"
+  >
+    View
+  </Link>
+</div>
           )
         )}
       </div>

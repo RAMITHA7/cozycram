@@ -3,6 +3,8 @@ import {
   BookOpen,
   CalendarDays,
   Clock3,
+  CheckCircle2,
+  ListTodo,
 } from "lucide-react";
 
 import {
@@ -117,6 +119,38 @@ const formatDeadlineDistance = (
   return `Due in ${days} days`;
 };
 
+const formatTaskEstimate = (
+  minutes
+) => {
+  const numericMinutes =
+    Number(minutes) || 0;
+
+
+  const hours =
+    Math.floor(
+      numericMinutes / 60
+    );
+
+
+  const remainingMinutes =
+    numericMinutes % 60;
+
+
+  if (
+    hours > 0 &&
+    remainingMinutes > 0
+  ) {
+    return `${hours}h ${remainingMinutes}m`;
+  }
+
+
+  if (hours > 0) {
+    return `${hours}h`;
+  }
+
+
+  return `${remainingMinutes} min`;
+};
 
 function SubjectDetailPage() {
   const {
@@ -144,6 +178,12 @@ function SubjectDetailPage() {
       ? studyData.subjects
       : [];
 
+  const tasks =
+  Array.isArray(
+    studyData?.tasks
+  )
+    ? studyData.tasks
+    : [];
 
   const subject =
     subjects.find(
@@ -155,6 +195,36 @@ function SubjectDetailPage() {
           subjectId
         )
     );
+
+  const subjectTasks =
+  subject
+    ? tasks.filter(
+        (task) =>
+          String(
+            task.subjectId
+          ) ===
+          String(
+            subject.id
+          )
+      )
+    : [];
+
+
+const openSubjectTasks =
+  subjectTasks.filter(
+    (task) =>
+      task.status ===
+      "todo"
+  );
+
+
+const completedSubjectTasks =
+  subjectTasks.filter(
+    (task) =>
+      task.status ===
+      "done"
+  );
+
 
 if (loadError) {
   return (
@@ -490,6 +560,136 @@ if (loadError) {
           </div>
         </dl>
       </section>
+
+      <section
+  className="subject-detail-tasks"
+  aria-labelledby="subject-tasks-title"
+>
+  <div className="subject-detail-tasks__header">
+    <div>
+      <p>
+        TASKS
+      </p>
+
+      <h2 id="subject-tasks-title">
+        Work for {subject.name}
+      </h2>
+
+      <span>
+        {openSubjectTasks.length}
+        {" "}
+        {openSubjectTasks.length === 1
+          ? "open task"
+          : "open tasks"}
+        {" · "}
+        {completedSubjectTasks.length}
+        {" "}
+        completed
+      </span>
+    </div>
+
+
+    <Link
+      to="/planner/tasks"
+      className="subject-detail-tasks__all"
+    >
+      View all tasks
+    </Link>
+  </div>
+
+
+  {subjectTasks.length === 0 ? (
+    <div className="subject-detail-tasks__empty">
+      <ListTodo
+        size={22}
+        strokeWidth={1.8}
+        aria-hidden="true"
+      />
+
+      <div>
+        <strong>
+          No tasks for this subject yet.
+        </strong>
+
+        <p>
+          Add a task from Planner → Tasks
+          and connect it to {subject.name}.
+        </p>
+      </div>
+    </div>
+  ) : (
+    <div className="subject-detail-task-list">
+      {subjectTasks.map(
+        (task) => (
+          <article
+            key={task.id}
+            className="subject-detail-task"
+          >
+            <div className="subject-detail-task__main">
+              <div>
+                {task.status ===
+                "done" ? (
+                  <CheckCircle2
+                    size={18}
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <ListTodo
+                    size={18}
+                    aria-hidden="true"
+                  />
+                )}
+              </div>
+
+              <div>
+                <strong>
+                  {task.title}
+                </strong>
+
+                <span>
+                  {
+                    formatTaskEstimate(
+                      task.estimatedMinutes
+                    )
+                  }
+
+                  {task.dueDate && (
+                    <>
+                      {" · "}
+                      Due{" "}
+                      {
+                        formatDeadlineDate(
+                          task.dueDate
+                        )
+                      }
+                    </>
+                  )}
+                </span>
+              </div>
+            </div>
+
+
+            <div className="subject-detail-task__right">
+              <span
+                className={`subject-detail-task__status subject-detail-task__status--${task.status}`}
+              >
+                {task.status === "done"
+                  ? "Done"
+                  : "To do"}
+              </span>
+
+              <Link
+                to={`/planner/tasks/${task.id}`}
+              >
+                View task
+              </Link>
+            </div>
+          </article>
+        )
+      )}
+    </div>
+  )}
+</section>
     </section>
   );
 }

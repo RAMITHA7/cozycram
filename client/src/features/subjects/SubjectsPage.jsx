@@ -73,6 +73,13 @@ function SubjectsPage() {
     : []
 );
 
+const tasks =
+  Array.isArray(
+    studyData?.tasks
+  )
+    ? studyData.tasks
+    : [];
+
 const [
   editorOpen,
   setEditorOpen,
@@ -377,6 +384,35 @@ const handleDeleteSubject = (
   setFormError("");
   setStatusMessage("");
 
+const attachedTasks =
+  tasks.filter(
+    (task) =>
+      String(
+        task.subjectId
+      ) ===
+      String(
+        subject.id
+      )
+  );
+
+
+if (
+  attachedTasks.length > 0
+) {
+  setDeleteCandidateId(
+    null
+  );
+
+
+  setSaveError(
+    attachedTasks.length === 1
+      ? `Move or delete the task connected to ${subject.name} before deleting this subject.`
+      : `Move or delete the ${attachedTasks.length} tasks connected to ${subject.name} before deleting this subject.`
+  );
+
+
+  return;
+}
 
   const nextSubjects =
     subjects.filter(

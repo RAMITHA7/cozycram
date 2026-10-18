@@ -1752,6 +1752,287 @@ h2 {
 }
 
 /* =========================================================
+   SUBJECT TASKS
+   ========================================================= */
+
+.subject-detail-tasks {
+  margin-top:
+    var(--space-4);
+
+  padding:
+    var(--space-5);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-lg);
+
+  background:
+    var(--color-surface-1);
+}
+
+.subject-detail-tasks__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap:
+    var(--space-4);
+
+  margin-bottom:
+    var(--space-5);
+}
+
+.subject-detail-tasks__header p {
+  margin-bottom:
+    var(--space-1);
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-overline);
+
+  font-weight:
+    var(--font-weight-semibold);
+
+  letter-spacing:
+    0.08em;
+}
+
+.subject-detail-tasks__header h2 {
+  font-size:
+    var(--text-heading-md);
+}
+
+.subject-detail-tasks__header span {
+  display: block;
+
+  margin-top:
+    var(--space-1);
+
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-body-sm);
+}
+
+.subject-detail-tasks__all {
+  min-height: 44px;
+
+  display: inline-flex;
+  align-items: center;
+
+  flex: 0 0 auto;
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-body-sm);
+
+  font-weight:
+    var(--font-weight-medium);
+}
+
+.subject-detail-tasks__all:focus-visible {
+  outline:
+    2px solid
+    var(--color-brand);
+
+  outline-offset:
+    3px;
+
+  border-radius:
+    var(--radius-sm);
+}
+
+
+.subject-detail-task-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.subject-detail-task {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap:
+    var(--space-4);
+
+  padding:
+    var(--space-4)
+    0;
+
+  border-bottom:
+    1px solid
+    var(--color-divider);
+}
+
+.subject-detail-task:first-child {
+  padding-top: 0;
+}
+
+.subject-detail-task:last-child {
+  padding-bottom: 0;
+
+  border-bottom: 0;
+}
+
+.subject-detail-task__main {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap:
+    var(--space-3);
+}
+
+.subject-detail-task__main
+> div:first-child {
+  width: 38px;
+  height: 38px;
+
+  display: grid;
+  place-items: center;
+
+  flex: 0 0 auto;
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+
+  color:
+    var(--color-brand);
+}
+
+.subject-detail-task__main
+> div:last-child {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-1);
+}
+
+.subject-detail-task__main strong {
+  overflow-wrap: anywhere;
+}
+
+.subject-detail-task__main span {
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
+
+.subject-detail-task__right {
+  display: flex;
+  align-items: center;
+
+  gap:
+    var(--space-3);
+
+  flex: 0 0 auto;
+}
+
+.subject-detail-task__right a {
+  min-height: 44px;
+
+  display: inline-flex;
+  align-items: center;
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-body-sm);
+
+  font-weight:
+    var(--font-weight-medium);
+}
+
+.subject-detail-task__status {
+  padding:
+    var(--space-1)
+    var(--space-2);
+
+  border-radius:
+    var(--radius-pill);
+
+  font-size:
+    var(--text-caption);
+
+  font-weight:
+    var(--font-weight-medium);
+}
+
+.subject-detail-task__status--todo {
+  background:
+    var(--color-surface-2);
+
+  color:
+    var(--color-text-secondary);
+}
+
+.subject-detail-task__status--done {
+  background:
+    color-mix(
+      in srgb,
+      var(--color-focus) 12%,
+      transparent
+    );
+
+  color:
+    var(--color-focus);
+}
+
+.subject-detail-tasks__empty {
+  display: flex;
+  align-items: flex-start;
+
+  gap:
+    var(--space-3);
+
+  padding:
+    var(--space-4);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+}
+
+.subject-detail-tasks__empty
+> svg {
+  flex: 0 0 auto;
+
+  color:
+    var(--color-brand);
+}
+
+.subject-detail-tasks__empty p {
+  margin-top:
+    var(--space-1);
+
+  color:
+    var(--color-text-secondary);
+
+  line-height: 1.5;
+}
+
+/* =========================================================
    FINAL RESPONSIVE OVERRIDES
    Keep responsive rules after all base component styles.
    ========================================================= */
@@ -1893,6 +2174,32 @@ h2 {
 
     text-align: left;
   }
+
+  .subject-detail-tasks {
+  padding:
+    var(--space-4);
+}
+
+.subject-detail-tasks__header {
+  flex-direction:
+    column;
+}
+
+.subject-detail-task {
+  align-items:
+    flex-start;
+
+  flex-direction:
+    column;
+}
+
+.subject-detail-task__right {
+  width: 100%;
+
+  justify-content:
+    space-between;
+}
+
 }
 
 

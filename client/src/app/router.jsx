@@ -18,6 +18,8 @@ import OnboardingPage from "../features/onboarding/OnboardingPage.jsx";
 import TodayPage from "../features/today/TodayPage.jsx";
 import SubjectsPage from "../features/subjects/SubjectsPage.jsx";
 import SubjectDetailPage from "../features/subjects/SubjectDetailPage.jsx";
+import TasksPage from "../features/tasks/TasksPage.jsx";
+import TaskDetailPage from "../features/tasks/TaskDetailPage.jsx";
 
 import RoutePlaceholder from "./RoutePlaceholder.jsx";
 import LandingPage from "../features/landing/LandingPage.jsx";
@@ -90,22 +92,12 @@ const router = createBrowserRouter([
 
       {
         path: "/planner/tasks",
-        element: (
-          <RoutePlaceholder
-            eyebrow="PLANNER"
-            title="Tasks"
-          />
-        ),
+        element: <TasksPage />
       },
 
       {
         path: "/planner/tasks/:taskId",
-        element: (
-          <RoutePlaceholder
-            eyebrow="TASK"
-            title="Task details"
-          />
-        ),
+        element: <TaskDetailPage />
       },
 
       {
