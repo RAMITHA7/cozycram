@@ -20,6 +20,8 @@ import SubjectsPage from "../features/subjects/SubjectsPage.jsx";
 import SubjectDetailPage from "../features/subjects/SubjectDetailPage.jsx";
 import TasksPage from "../features/tasks/TasksPage.jsx";
 import TaskDetailPage from "../features/tasks/TaskDetailPage.jsx";
+import PlannerPage from "../features/planner/PlannerPage.jsx";
+import AvailabilityPage from "../features/planner/AvailabilityPage.jsx";
 
 import RoutePlaceholder from "./RoutePlaceholder.jsx";
 import LandingPage from "../features/landing/LandingPage.jsx";
@@ -81,13 +83,7 @@ const router = createBrowserRouter([
 
       {
         path: "/planner",
-        element: (
-          <RoutePlaceholder
-            eyebrow="PLANNER"
-            title="Your study plan"
-            description="Overview of your week and generated study blocks."
-          />
-        ),
+        element: <PlannerPage />
       },
 
       {
@@ -112,13 +108,7 @@ const router = createBrowserRouter([
 
       {
         path: "/planner/availability",
-        element: (
-          <RoutePlaceholder
-            eyebrow="PLANNER"
-            title="Availability"
-            description="Tell CozyCram when you can realistically study."
-          />
-        ),
+        element: <AvailabilityPage />
       },
 
       {

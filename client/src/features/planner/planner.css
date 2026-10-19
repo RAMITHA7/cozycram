@@ -1,0 +1,2595 @@
+/* =========================================================
+   PLANNER PAGE
+   ========================================================= */
+
+.planner-page {
+  width: 100%;
+  max-width: 1240px;
+
+  margin-inline: auto;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.planner-header {
+  margin-bottom:
+    var(--space-8);
+}
+
+.planner-header__eyebrow {
+  margin-bottom:
+    var(--space-2);
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-overline);
+
+  font-weight:
+    var(--font-weight-semibold);
+
+  letter-spacing:
+    0.08em;
+}
+
+.planner-header h1 {
+  font-size:
+    var(--text-display-md);
+
+  line-height: 1.08;
+
+  letter-spacing:
+    -0.03em;
+}
+
+.planner-header__intro {
+  max-width: 720px;
+
+  margin-top:
+    var(--space-3);
+
+  color:
+    var(--color-text-secondary);
+
+  line-height: 1.65;
+}
+
+
+/* =========================================================
+   SUMMARY
+   ========================================================= */
+
+.planner-summary {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap:
+    var(--space-4);
+
+  margin-bottom:
+    var(--space-6);
+}
+
+.planner-summary-card {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap:
+    var(--space-3);
+
+  padding:
+    var(--space-4);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-1);
+}
+
+.planner-summary-card > svg {
+  flex: 0 0 auto;
+
+  color:
+    var(--color-brand);
+}
+
+.planner-summary-card > div {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-1);
+}
+
+.planner-summary-card span {
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
+
+.planner-summary-card strong {
+  font-size:
+    var(--text-heading-sm);
+}
+
+
+/* =========================================================
+   SECTION HEADING
+   ========================================================= */
+
+.planner-section-heading {
+  margin-bottom:
+    var(--space-4);
+}
+
+.planner-section-heading--row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+
+  gap:
+    var(--space-4);
+}
+
+.planner-section-heading p {
+  margin-bottom:
+    var(--space-1);
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-overline);
+
+  font-weight:
+    var(--font-weight-semibold);
+
+  letter-spacing:
+    0.08em;
+}
+
+.planner-section-heading h2 {
+  font-size:
+    var(--text-heading-lg);
+}
+
+.planner-section-heading span {
+  display: block;
+
+  max-width: 680px;
+
+  margin-top:
+    var(--space-2);
+
+  color:
+    var(--color-text-secondary);
+
+  line-height: 1.55;
+}
+
+/* =========================================================
+   WEEK STRUCTURE
+   ========================================================= */
+
+.planner-week {
+  margin-bottom:
+    var(--space-6);
+
+  padding:
+    var(--space-5);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-lg);
+
+  background:
+    var(--color-surface-1);
+}
+
+.planner-week__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap:
+    var(--space-4);
+
+  margin-bottom:
+    var(--space-5);
+}
+
+.planner-week__eyebrow {
+  margin-bottom:
+    var(--space-1);
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-overline);
+
+  font-weight:
+    var(--font-weight-semibold);
+
+  letter-spacing:
+    0.08em;
+}
+
+.planner-week__header h2 {
+  font-size:
+    var(--text-heading-lg);
+}
+
+.planner-week__header
+> div:first-child
+> span {
+  display: block;
+
+  margin-top:
+    var(--space-1);
+
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-body-sm);
+}
+
+.planner-week__controls {
+  display: flex;
+  align-items: center;
+
+  gap:
+    var(--space-2);
+
+  flex: 0 0 auto;
+}
+
+.planner-week__control {
+  width: 44px;
+  height: 44px;
+
+  display: grid;
+  place-items: center;
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-1);
+
+  color:
+    var(--color-text-secondary);
+
+  cursor: pointer;
+}
+
+.planner-week__today {
+  min-height: 44px;
+
+  padding:
+    0
+    var(--space-4);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-1);
+
+  color:
+    var(--color-brand);
+
+  font: inherit;
+
+  font-size:
+    var(--text-body-sm);
+
+  font-weight:
+    var(--font-weight-medium);
+
+  cursor: pointer;
+}
+
+.planner-week__control:hover,
+.planner-week__today:hover {
+  background:
+    var(--color-surface-hover);
+}
+
+.planner-week__control:focus-visible,
+.planner-week__today:focus-visible {
+  outline:
+    2px solid
+    var(--color-brand);
+
+  outline-offset:
+    3px;
+}
+
+/* =========================================================
+   WEEK CONTEXT
+   ========================================================= */
+
+.planner-week-context {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap:
+    var(--space-3);
+
+  margin-bottom:
+    var(--space-5);
+}
+
+.planner-week-context__card {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap:
+    var(--space-3);
+
+  padding:
+    var(--space-3);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+}
+
+.planner-week-context__card
+> svg {
+  flex: 0 0 auto;
+
+  color:
+    var(--color-brand);
+}
+
+.planner-week-context__card
+> div {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-1);
+}
+
+.planner-week-context__card span {
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
+
+.planner-week-context__card strong {
+  font-size:
+    var(--text-heading-sm);
+}
+
+/* =========================================================
+   WEEK DAYS
+   ========================================================= */
+
+.planner-week__days {
+  display: grid;
+
+  grid-template-columns:
+    repeat(7, minmax(0, 1fr));
+
+  gap:
+    var(--space-2);
+}
+
+.planner-day {
+  min-width: 0;
+  min-height: 112px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap:
+    var(--space-1);
+
+  padding:
+    var(--space-3)
+    var(--space-2);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-1);
+
+  color:
+    var(--color-text-primary);
+
+  font: inherit;
+
+  cursor: pointer;
+}
+
+.planner-day:hover {
+  background:
+    var(--color-surface-hover);
+}
+
+.planner-day:focus-visible {
+  outline:
+    2px solid
+    var(--color-brand);
+
+  outline-offset:
+    3px;
+}
+
+.planner-day--selected {
+  border-color:
+    var(--color-brand);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--color-brand) 8%,
+      var(--color-surface-1)
+    );
+}
+
+.planner-day--idle {
+  border-color:
+    var(--color-border-subtle);
+
+  background:
+    var(--color-surface-1);
+
+  box-shadow: none;
+}
+
+
+.planner-day--selected {
+  border-color:
+    var(--color-brand);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--color-brand) 10%,
+      var(--color-surface-1)
+    );
+
+  box-shadow:
+    inset 0 0 0 1px
+    var(--color-brand);
+}
+
+.planner-day__weekday {
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+
+  font-weight:
+    var(--font-weight-medium);
+
+  text-transform:
+    uppercase;
+}
+
+.planner-day__number {
+  font-size:
+    var(--text-heading-md);
+
+  line-height: 1.1;
+}
+
+.planner-day__month {
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-caption);
+}
+
+.planner-day__today-label {
+  margin-top:
+    var(--space-1);
+
+  padding:
+    2px
+    var(--space-2);
+
+  border-radius:
+    var(--radius-pill);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--color-brand) 12%,
+      transparent
+    );
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-caption);
+
+  font-weight:
+    var(--font-weight-medium);
+}
+
+.planner-day__availability {
+  margin-top:
+    var(--space-1);
+
+  padding:
+    2px
+    var(--space-2);
+
+  border-radius:
+    var(--radius-pill);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--color-focus) 12%,
+      transparent
+    );
+
+  color:
+    var(--color-focus);
+
+  font-size:
+    var(--text-caption);
+
+  font-weight:
+    var(--font-weight-medium);
+}
+
+.planner-day__due {
+  margin-top:
+    var(--space-1);
+
+  padding:
+    2px
+    var(--space-2);
+
+  border-radius:
+    var(--radius-pill);
+
+  background:
+    var(--color-surface-2);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-caption);
+
+  font-weight:
+    var(--font-weight-medium);
+}
+
+
+/* =========================================================
+   SELECTED DAY
+   ========================================================= */
+
+.planner-selected-day {
+  margin-top:
+    var(--space-5);
+
+  padding-top:
+    var(--space-5);
+
+  border-top:
+    1px solid
+    var(--color-divider);
+}
+
+.planner-selected-day__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap:
+    var(--space-4);
+
+  margin-bottom:
+    var(--space-4);
+}
+
+.planner-selected-day__header p {
+  margin-bottom:
+    var(--space-1);
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-overline);
+
+  font-weight:
+    var(--font-weight-semibold);
+
+  letter-spacing:
+    0.08em;
+}
+
+.planner-selected-day__header h3 {
+  font-size:
+    var(--text-heading-md);
+}
+
+.planner-selected-day__badge {
+  padding:
+    var(--space-1)
+    var(--space-3);
+
+  border-radius:
+    var(--radius-pill);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--color-brand) 10%,
+      transparent
+    );
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-caption);
+
+  font-weight:
+    var(--font-weight-medium);
+}
+
+.planner-selected-day__empty {
+  display: flex;
+  align-items: flex-start;
+
+  gap:
+    var(--space-3);
+
+  padding:
+    var(--space-4);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+}
+
+.planner-selected-day__empty
+> svg {
+  flex: 0 0 auto;
+
+  color:
+    var(--color-brand);
+}
+
+.planner-selected-day__empty strong {
+  display: block;
+}
+
+.planner-selected-day__empty p {
+  max-width: 700px;
+
+  margin-top:
+    var(--space-1);
+
+  color:
+    var(--color-text-secondary);
+
+  line-height: 1.55;
+}
+
+/* =========================================================
+   SELECTED DAY AVAILABILITY
+   ========================================================= */
+
+.planner-selected-availability {
+  padding:
+    var(--space-4);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-1);
+}
+
+
+.planner-selected-availability__active,
+.planner-selected-availability__inactive {
+  display: flex;
+  align-items: flex-start;
+
+  gap:
+    var(--space-3);
+
+  padding:
+    var(--space-4);
+
+  border-radius:
+    var(--radius-md);
+}
+
+
+.planner-selected-availability__active {
+  background:
+    color-mix(
+      in srgb,
+      var(--color-focus) 8%,
+      var(--color-surface-2)
+    );
+}
+
+
+.planner-selected-availability__inactive {
+  background:
+    var(--color-surface-2);
+}
+
+
+.planner-selected-availability__active
+> svg {
+  flex: 0 0 auto;
+
+  color:
+    var(--color-focus);
+}
+
+
+.planner-selected-availability__inactive
+> svg {
+  flex: 0 0 auto;
+
+  color:
+    var(--color-text-muted);
+}
+
+
+.planner-selected-availability__active
+> div,
+.planner-selected-availability__inactive
+> div {
+  min-width: 0;
+}
+
+
+.planner-selected-availability__active strong,
+.planner-selected-availability__inactive strong {
+  display: block;
+}
+
+
+.planner-selected-availability__active span {
+  display: block;
+
+  margin-top:
+    var(--space-1);
+
+  color:
+    var(--color-focus);
+
+  font-size:
+    var(--text-body-sm);
+
+  font-weight:
+    var(--font-weight-medium);
+}
+
+
+.planner-selected-availability__active p,
+.planner-selected-availability__inactive p {
+  margin-top:
+    var(--space-2);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+
+  line-height: 1.5;
+}
+
+/* =========================================================
+   SELECTED DAY TASK CONTEXT
+   ========================================================= */
+
+.planner-selected-day__content {
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-4);
+}
+
+.planner-selected-day__tasks {
+  padding:
+    var(--space-4);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-1);
+}
+
+.planner-selected-day__section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap:
+    var(--space-4);
+
+  margin-bottom:
+    var(--space-4);
+}
+
+.planner-selected-day__section-heading p {
+  margin-bottom:
+    var(--space-1);
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-overline);
+
+  font-weight:
+    var(--font-weight-semibold);
+
+  letter-spacing:
+    0.08em;
+}
+
+.planner-selected-day__section-heading h4 {
+  font-size:
+    var(--text-heading-sm);
+}
+
+.planner-selected-day__section-heading
+> span {
+  min-width: 30px;
+  min-height: 30px;
+
+  display: grid;
+  place-items: center;
+
+  padding-inline:
+    var(--space-2);
+
+  border-radius:
+    var(--radius-pill);
+
+  background:
+    var(--color-surface-2);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-caption);
+
+  font-weight:
+    var(--font-weight-semibold);
+}
+
+.planner-selected-task-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.planner-selected-task {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap:
+    var(--space-4);
+
+  padding:
+    var(--space-3)
+    0;
+
+  border-bottom:
+    1px solid
+    var(--color-divider);
+}
+
+.planner-selected-task:first-child {
+  padding-top: 0;
+}
+
+.planner-selected-task:last-child {
+  padding-bottom: 0;
+
+  border-bottom: 0;
+}
+
+.planner-selected-task__main {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-1);
+}
+
+.planner-selected-task__main strong {
+  overflow-wrap: anywhere;
+}
+
+.planner-selected-task__main span {
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
+
+.planner-selected-task__link {
+  min-height: 44px;
+
+  display: inline-flex;
+  align-items: center;
+
+  flex: 0 0 auto;
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-body-sm);
+
+  font-weight:
+    var(--font-weight-medium);
+}
+
+.planner-selected-task__link:focus-visible {
+  outline:
+    2px solid
+    var(--color-brand);
+
+  outline-offset:
+    3px;
+
+  border-radius:
+    var(--radius-sm);
+}
+
+.planner-selected-day__no-tasks {
+  display: flex;
+  align-items: flex-start;
+
+  gap:
+    var(--space-3);
+
+  padding:
+    var(--space-3);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+}
+
+.planner-selected-day__no-tasks
+> svg {
+  flex: 0 0 auto;
+
+  color:
+    var(--color-brand);
+}
+
+.planner-selected-day__no-tasks p {
+  margin-top:
+    var(--space-1);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+
+  line-height: 1.5;
+}
+
+/* =========================================================
+   SELECTED DAY SUMMARY
+   ========================================================= */
+
+.planner-selected-day__summary {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap:
+    var(--space-3);
+
+  margin-bottom:
+    var(--space-4);
+}
+
+
+.planner-selected-day__summary
+> div {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-1);
+
+  padding:
+    var(--space-3);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+}
+
+
+.planner-selected-day__summary span {
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
+
+
+.planner-selected-day__summary strong {
+  overflow-wrap: anywhere;
+
+  font-size:
+    var(--text-body-sm);
+}
+
+/* =========================================================
+   PLANNER CONTEXT LINKS
+   ========================================================= */
+
+.planner-context-link {
+  min-height: 44px;
+
+  display: inline-flex;
+  align-items: center;
+
+  gap:
+    var(--space-2);
+
+  margin-top:
+    var(--space-3);
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-body-sm);
+
+  font-weight:
+    var(--font-weight-medium);
+}
+
+
+.planner-context-link:hover {
+  text-decoration:
+    underline;
+}
+
+
+.planner-context-link:focus-visible {
+  outline:
+    2px solid
+    var(--color-brand);
+
+  outline-offset:
+    3px;
+
+  border-radius:
+    var(--radius-sm);
+}
+
+.planner-status__actions {
+  display: flex;
+  justify-content: flex-end;
+
+  margin-top:
+    var(--space-4);
+}
+
+
+.planner-status__action {
+  min-height: 44px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap:
+    var(--space-2);
+
+  padding:
+    0
+    var(--space-4);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-1);
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-body-sm);
+
+  font-weight:
+    var(--font-weight-medium);
+}
+
+
+.planner-status__action:hover {
+  background:
+    var(--color-surface-hover);
+}
+
+
+.planner-status__action:focus-visible {
+  outline:
+    2px solid
+    var(--color-brand);
+
+  outline-offset:
+    3px;
+}
+
+/* =========================================================
+   SUBJECT WORKLOAD
+   ========================================================= */
+
+.planner-workload {
+  margin-bottom:
+    var(--space-6);
+
+  padding:
+    var(--space-5);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-lg);
+
+  background:
+    var(--color-surface-1);
+}
+
+.planner-workload__list {
+  display: flex;
+  flex-direction: column;
+}
+
+.planner-workload-item {
+  min-width: 0;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto
+    auto;
+
+  align-items: center;
+
+  gap:
+    var(--space-4);
+
+  padding:
+    var(--space-4)
+    0;
+
+  border-bottom:
+    1px solid
+    var(--color-divider);
+
+  color:
+    var(--color-text-primary);
+}
+
+.planner-workload-item:first-child {
+  padding-top: 0;
+}
+
+.planner-workload-item:last-child {
+  padding-bottom: 0;
+
+  border-bottom: 0;
+}
+
+.planner-workload-item
+> div:first-child {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-1);
+}
+
+.planner-workload-item
+> div:first-child strong {
+  overflow-wrap: anywhere;
+}
+
+.planner-workload-item
+> div:first-child span {
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
+
+.planner-workload-item__hours {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+
+  gap:
+    var(--space-1);
+
+  text-align: right;
+}
+
+.planner-workload-item__hours span {
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
+
+.planner-workload-item
+> svg {
+  color:
+    var(--color-brand);
+}
+
+/* =========================================================
+   PLANNER TOOLS
+   ========================================================= */
+
+.planner-tools {
+  margin-bottom:
+    var(--space-6);
+}
+
+.planner-tools__grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap:
+    var(--space-4);
+}
+
+.planner-tool-card {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-4);
+
+  padding:
+    var(--space-5);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-lg);
+
+  background:
+    var(--color-surface-1);
+
+  color:
+    var(--color-text-primary);
+}
+
+.planner-tool-card:hover {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--color-brand) 45%,
+      var(--color-border-subtle)
+    );
+
+  background:
+    var(--color-surface-hover);
+}
+
+.planner-tool-card:focus-visible {
+  outline:
+    2px solid
+    var(--color-brand);
+
+  outline-offset:
+    3px;
+}
+
+.planner-tool-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap:
+    var(--space-3);
+}
+
+.planner-tool-card__top
+> svg {
+  color:
+    var(--color-text-muted);
+}
+
+.planner-tool-card__icon {
+  width: 46px;
+  height: 46px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--color-brand) 10%,
+      transparent
+    );
+
+  color:
+    var(--color-brand);
+}
+
+.planner-tool-card h3 {
+  font-size:
+    var(--text-heading-md);
+}
+
+.planner-tool-card p {
+  margin-top:
+    var(--space-2);
+
+  color:
+    var(--color-text-secondary);
+
+  line-height: 1.55;
+}
+
+.planner-tool-card
+> strong {
+  margin-top: auto;
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-body-sm);
+}
+
+
+/* =========================================================
+   PLANNING STATUS
+   ========================================================= */
+
+.planner-status {
+  margin-bottom:
+    var(--space-6);
+
+  padding:
+    var(--space-5);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-lg);
+
+  background:
+    var(--color-surface-1);
+}
+
+.planner-status__content {
+  display: flex;
+  align-items: flex-start;
+
+  gap:
+    var(--space-4);
+}
+
+.planner-status__icon {
+  width: 48px;
+  height: 48px;
+
+  display: grid;
+  place-items: center;
+
+  flex: 0 0 auto;
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--color-focus) 12%,
+      transparent
+    );
+
+  color:
+    var(--color-focus);
+}
+
+.planner-status__content
+> div:last-child {
+  min-width: 0;
+}
+
+.planner-status__content strong {
+  display: block;
+
+  font-size:
+    var(--text-heading-sm);
+}
+
+.planner-status__content p {
+  max-width: 760px;
+
+  margin-top:
+    var(--space-2);
+
+  color:
+    var(--color-text-secondary);
+
+  line-height: 1.6;
+}
+
+/* =========================================================
+   SCHEDULING READINESS
+   ========================================================= */
+
+.planner-readiness {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap:
+    var(--space-3);
+
+  margin-top:
+    var(--space-5);
+}
+
+
+.planner-readiness__item {
+  min-width: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap:
+    var(--space-3);
+
+  padding:
+    var(--space-3);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+}
+
+
+.planner-readiness__item
+> svg {
+  flex: 0 0 auto;
+}
+
+
+.planner-readiness__item--ready
+> svg {
+  color:
+    var(--color-focus);
+}
+
+
+.planner-readiness__item--missing
+> svg {
+  color:
+    var(--color-text-muted);
+}
+
+
+.planner-readiness__item
+> div {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-1);
+}
+
+
+.planner-readiness__item span {
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
+
+
+.planner-readiness__item strong {
+  overflow-wrap: anywhere;
+
+  font-size:
+    var(--text-body-sm);
+}
+
+.planner-status__content--ready
+.planner-status__icon {
+  background:
+    color-mix(
+      in srgb,
+      var(--color-focus) 12%,
+      transparent
+    );
+
+  color:
+    var(--color-focus);
+}
+
+
+.planner-status__content--waiting
+.planner-status__icon {
+  background:
+    var(--color-surface-2);
+
+  color:
+    var(--color-text-muted);
+}
+
+/* =========================================================
+   PLANNER NOTICES
+   ========================================================= */
+
+.planner-notices {
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-3);
+
+  margin-top:
+    var(--space-4);
+}
+
+
+.planner-notice {
+  padding:
+    var(--space-4);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+}
+
+
+.planner-notice strong {
+  display: block;
+
+  font-size:
+    var(--text-body-sm);
+}
+
+
+.planner-notice p {
+  margin-top:
+    var(--space-1);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+
+  line-height: 1.5;
+}
+
+
+/* =========================================================
+   UPCOMING WORK
+   ========================================================= */
+
+.planner-upcoming {
+  padding:
+    var(--space-5);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-lg);
+
+  background:
+    var(--color-surface-1);
+}
+
+.planner-section-link {
+  min-height: 44px;
+
+  display: inline-flex;
+  align-items: center;
+
+  flex: 0 0 auto;
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-body-sm);
+
+  font-weight:
+    var(--font-weight-medium);
+}
+
+.planner-section-link:focus-visible {
+  outline:
+    2px solid
+    var(--color-brand);
+
+  outline-offset:
+    3px;
+
+  border-radius:
+    var(--radius-sm);
+}
+
+.planner-upcoming__list {
+  display: flex;
+  flex-direction: column;
+}
+
+.planner-upcoming-item {
+  min-width: 0;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto
+    auto;
+
+  align-items: center;
+
+  gap:
+    var(--space-4);
+
+  padding:
+    var(--space-4)
+    0;
+
+  border-bottom:
+    1px solid
+    var(--color-divider);
+
+  color:
+    var(--color-text-primary);
+}
+
+.planner-upcoming-item:first-child {
+  padding-top: 0;
+}
+
+.planner-upcoming-item:last-child {
+  padding-bottom: 0;
+
+  border-bottom: 0;
+}
+
+.planner-upcoming-item
+> div:first-child {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-1);
+}
+
+.planner-upcoming-item
+> div:first-child
+> strong {
+  overflow-wrap: anywhere;
+}
+
+.planner-upcoming-item
+> div:first-child
+> span {
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
+
+.planner-upcoming-item__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+
+  gap:
+    var(--space-1);
+
+  text-align: right;
+}
+
+.planner-upcoming-item__meta span {
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
+
+.planner-upcoming-item__meta strong {
+  font-size:
+    var(--text-body-sm);
+}
+
+.planner-upcoming-item
+> svg {
+  color:
+    var(--color-brand);
+}
+
+
+/* =========================================================
+   UPCOMING EMPTY
+   ========================================================= */
+
+.planner-upcoming__empty {
+  display: flex;
+  align-items: flex-start;
+
+  gap:
+    var(--space-3);
+
+  padding:
+    var(--space-4);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+}
+
+.planner-upcoming__empty
+> svg {
+  flex: 0 0 auto;
+
+  color:
+    var(--color-brand);
+}
+
+.planner-upcoming__empty p {
+  margin-top:
+    var(--space-1);
+
+  color:
+    var(--color-text-secondary);
+
+  line-height: 1.55;
+}
+
+
+/* =========================================================
+   COMPLETED NOTE
+   ========================================================= */
+
+.planner-completed-note {
+  margin-top:
+    var(--space-4);
+
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-body-sm);
+}
+
+
+/* =========================================================
+   SETUP / LOAD STATE
+   ========================================================= */
+
+.planner-state {
+  display: flex;
+  align-items: flex-start;
+
+  gap:
+    var(--space-4);
+
+  padding:
+    var(--space-5);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-lg);
+
+  background:
+    var(--color-surface-1);
+}
+
+.planner-state__icon {
+  width: 48px;
+  height: 48px;
+
+  display: grid;
+  place-items: center;
+
+  flex: 0 0 auto;
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--color-brand) 10%,
+      transparent
+    );
+
+  color:
+    var(--color-brand);
+}
+
+.planner-state__content {
+  min-width: 0;
+}
+
+.planner-state h2 {
+  font-size:
+    var(--text-heading-md);
+}
+
+.planner-state p {
+  margin-top:
+    var(--space-1);
+
+  color:
+    var(--color-text-secondary);
+
+  line-height: 1.6;
+}
+
+.planner-primary-link {
+  min-height: 44px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-left: auto;
+
+  flex: 0 0 auto;
+
+  padding:
+    0
+    var(--space-4);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-brand);
+
+  color:
+    var(--color-brand-on);
+
+  font-size:
+    var(--text-body-sm);
+
+  font-weight:
+    var(--font-weight-semibold);
+}
+
+.planner-primary-link:focus-visible {
+  outline:
+    2px solid
+    var(--color-brand);
+
+  outline-offset:
+    3px;
+}
+
+/* =========================================================
+   AVAILABILITY PAGE
+   ========================================================= */
+
+.availability-page {
+  width: 100%;
+  max-width: 1040px;
+
+  margin-inline: auto;
+}
+
+
+.availability-back {
+  min-height: 44px;
+
+  display: inline-flex;
+  align-items: center;
+
+  gap:
+    var(--space-2);
+
+  margin-bottom:
+    var(--space-5);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+
+  font-weight:
+    var(--font-weight-medium);
+}
+
+
+.availability-back:hover {
+  color:
+    var(--color-brand);
+}
+
+
+.availability-back:focus-visible {
+  outline:
+    2px solid
+    var(--color-brand);
+
+  outline-offset:
+    3px;
+
+  border-radius:
+    var(--radius-sm);
+}
+
+
+.availability-header {
+  margin-bottom:
+    var(--space-6);
+}
+
+
+.availability-header > p {
+  margin-bottom:
+    var(--space-1);
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-overline);
+
+  font-weight:
+    var(--font-weight-semibold);
+
+  letter-spacing:
+    0.08em;
+}
+
+
+.availability-header h1 {
+  font-size:
+    var(--text-display-sm);
+}
+
+
+.availability-header > span {
+  display: block;
+
+  max-width: 680px;
+
+  margin-top:
+    var(--space-2);
+
+  color:
+    var(--color-text-secondary);
+
+  line-height: 1.6;
+}
+
+.availability-summary {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap:
+    var(--space-4);
+
+  margin-bottom:
+    var(--space-6);
+}
+
+
+.availability-summary article {
+  display: flex;
+  align-items: center;
+
+  gap:
+    var(--space-3);
+
+  padding:
+    var(--space-4);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-1);
+}
+
+
+.availability-summary svg {
+  color:
+    var(--color-brand);
+}
+
+
+.availability-summary article
+> div {
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-1);
+}
+
+
+.availability-summary span {
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
+
+
+.availability-summary strong {
+  font-size:
+    var(--text-heading-sm);
+}
+
+.availability-list-section {
+  padding:
+    var(--space-5);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-lg);
+
+  background:
+    var(--color-surface-1);
+}
+
+
+.availability-list {
+  display: flex;
+  flex-direction: column;
+}
+
+
+.availability-day {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap:
+    var(--space-4);
+
+  padding:
+    var(--space-4)
+    0;
+
+  border-bottom:
+    1px solid
+    var(--color-divider);
+}
+
+
+.availability-day:first-child {
+  padding-top: 0;
+}
+
+
+.availability-day:last-child {
+  padding-bottom: 0;
+
+  border-bottom: 0;
+}
+
+
+.availability-day
+> div:first-child {
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-1);
+}
+
+
+.availability-day__status {
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
+
+
+.availability-day__status--active {
+  color:
+    var(--color-focus);
+}
+
+
+.availability-day__time {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+
+  gap:
+    var(--space-1);
+
+  text-align: right;
+}
+
+
+.availability-day__time span {
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
+
+.availability-edit-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap:
+    var(--space-4);
+
+  margin-top:
+    var(--space-4);
+
+  padding:
+    var(--space-4);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+}
+
+
+.availability-edit-note p {
+  margin-top:
+    var(--space-1);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+}
+
+.planner-week__today[aria-pressed="true"] {
+  border-color:
+    var(--color-brand);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--color-brand) 10%,
+      var(--color-surface-1)
+    );
+
+  color:
+    var(--color-brand);
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1023px) {
+  .planner-summary {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+
+  .planner-tools__grid {
+    grid-template-columns:
+      1fr;
+  }
+
+  .planner-day {
+  min-height: 104px;
+}
+.planner-week-context {
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+}
+
+.planner-readiness {
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+}
+}
+
+
+@media (max-width: 767px) {
+  .planner-header {
+    margin-bottom:
+      var(--space-6);
+  }
+
+
+  .planner-header h1 {
+    font-size:
+      var(--text-display-sm);
+  }
+
+
+  .planner-summary {
+    grid-template-columns:
+      1fr;
+  }
+
+
+  .planner-section-heading--row {
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+  }
+
+
+  .planner-tool-card,
+  .planner-status,
+  .planner-upcoming {
+    padding:
+      var(--space-4);
+  }
+
+
+  .planner-status__content {
+    flex-direction:
+      column;
+  }
+
+
+  .planner-upcoming-item {
+    grid-template-columns:
+      minmax(0, 1fr)
+      auto;
+  }
+
+
+  .planner-upcoming-item__meta {
+    grid-column:
+      1 / -1;
+
+    align-items:
+      flex-start;
+
+    text-align: left;
+  }
+
+
+  .planner-state {
+    flex-direction:
+      column;
+  }
+
+
+  .planner-primary-link {
+    width: 100%;
+
+    margin-left: 0;
+  }
+
+  .planner-week {
+  padding:
+    var(--space-4);
+}
+
+
+.planner-week__header {
+  flex-direction:
+    column;
+}
+
+
+.planner-week__controls {
+  width: 100%;
+}
+
+
+.planner-week__today {
+  flex: 1;
+}
+
+
+.planner-week__days {
+  grid-template-columns:
+    repeat(7, minmax(76px, 1fr));
+
+  overflow-x: auto;
+
+  padding-bottom:
+    var(--space-2);
+
+  scrollbar-width:
+    thin;
+}
+
+
+.planner-day {
+  min-height: 100px;
+}
+
+
+.planner-selected-day__header {
+  flex-direction:
+    column;
+}
+
+
+.planner-selected-day__empty {
+  flex-direction:
+    column;
+}
+
+.planner-week-context {
+  grid-template-columns:
+    1fr;
+}
+
+
+.planner-selected-task {
+  align-items:
+    flex-start;
+
+  flex-direction:
+    column;
+}
+
+
+.planner-selected-task__link {
+  width: 100%;
+}
+
+
+.planner-workload {
+  padding:
+    var(--space-4);
+}
+
+
+.planner-workload-item {
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto;
+}
+
+
+.planner-workload-item__hours {
+  grid-column:
+    1 / -1;
+
+  align-items:
+    flex-start;
+
+  text-align: left;
+}
+
+.availability-summary {
+  grid-template-columns:
+    1fr;
+}
+
+
+.availability-list-section {
+  padding:
+    var(--space-4);
+}
+
+
+.availability-day {
+  align-items:
+    flex-start;
+
+  flex-direction:
+    column;
+}
+
+
+.availability-day__time {
+  align-items:
+    flex-start;
+
+  text-align: left;
+}
+
+
+.availability-edit-note {
+  align-items:
+    flex-start;
+
+  flex-direction:
+    column;
+}
+
+
+.availability-edit-note
+.planner-primary-link {
+  width: 100%;
+}
+
+.planner-readiness {
+  grid-template-columns:
+    1fr;
+}
+
+.planner-selected-day__summary {
+  grid-template-columns:
+    1fr;
+}
+
+
+.planner-status__actions {
+  justify-content:
+    stretch;
+}
+
+
+.planner-status__action {
+  width: 100%;
+}
+
+}
