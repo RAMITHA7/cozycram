@@ -519,7 +519,7 @@ function PlannerPage() {
       ),
     0
   );
-  
+
   const weeklyHours =
     subjects.reduce(
       (total, subject) =>
@@ -1400,7 +1400,7 @@ const dayIsAvailable =
 </div>
 
     <div className="planner-selected-day__content">
-    
+
     <section
   className="planner-selected-availability"
   aria-labelledby="planner-selected-availability-title"
@@ -1430,7 +1430,7 @@ const dayIsAvailable =
     size={17}
     aria-hidden="true"
   />
-</Link>  
+</Link>
       <Clock3
         size={21}
         strokeWidth={1.8}
