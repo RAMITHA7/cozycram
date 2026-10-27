@@ -21,6 +21,11 @@ import {
   loadStudyData,
 } from "../../services/studyDataService.js";
 
+import {
+  generateWeeklySchedule,
+  UNSCHEDULED_REASON,
+} from "../../services/schedulingEngine.js";
+
 import "./planner.css";
 
 
@@ -164,6 +169,38 @@ const startOfDay = (
   return nextDate;
 };
 
+const getUnscheduledReasonCopy = (
+  reason
+) => {
+  if (
+    reason ===
+    UNSCHEDULED_REASON
+      .NO_AVAILABILITY
+  ) {
+    return "No usable study availability exists in this week.";
+  }
+
+
+  if (
+    reason ===
+    UNSCHEDULED_REASON
+      .INVALID_DEADLINE
+  ) {
+    return "This task has a deadline CozyCram could not safely interpret.";
+  }
+
+
+  if (
+    reason ===
+    UNSCHEDULED_REASON
+      .INSUFFICIENT_CAPACITY
+  ) {
+    return "There was not enough eligible study time to place all of this work.";
+  }
+
+
+  return "Some of this work could not be scheduled.";
+};
 
 const addDays = (
   date,
@@ -455,6 +492,30 @@ function PlannerPage() {
       new Date()
     )
 );
+
+  const [
+  generatedSchedule,
+  setGeneratedSchedule,
+] = useState(
+  null
+);
+
+
+const [
+  generatedWeekStart,
+  setGeneratedWeekStart,
+] = useState(
+  null
+);
+
+
+const [
+  scheduleError,
+  setScheduleError,
+] = useState(
+  ""
+);
+
   const studyData =
     initialData.data;
 
@@ -546,6 +607,18 @@ function PlannerPage() {
       )
     );
 
+const plannerTaskMap =
+  new Map(
+    tasks.map(
+      (task) => [
+        String(
+          task.id
+        ),
+
+        task,
+      ]
+    )
+  );
 
   const attentionOpenTasks =
   openTasks
@@ -596,6 +669,11 @@ const weekEnd =
   addDays(
     weekStart,
     6
+  );
+
+const weekStartKey =
+  toDateKey(
+    weekStart
   );
 
 const weekDays =
@@ -774,6 +852,10 @@ const isSchedulingReady =
   hasOpenTasks &&
   hasStudyAvailability;
 
+const canGenerateSchedule =
+  hasSubjects &&
+  hasOpenTasks;
+
 const schedulingStatus =
   !hasSubjects
     ? {
@@ -840,6 +922,39 @@ const readinessAction =
               "/planner/tasks",
           };
 
+const activeSchedule =
+  generatedWeekStart ===
+    weekStartKey
+    ? generatedSchedule
+    : null;
+
+
+const activeScheduleError =
+  generatedWeekStart ===
+    weekStartKey
+    ? scheduleError
+    : "";
+
+const selectedDateBlocks =
+  activeSchedule
+    ? activeSchedule.blocks
+        .filter(
+          (block) =>
+            block.date ===
+            selectedDateKey
+        )
+        .sort(
+          (
+            first,
+            second
+          ) =>
+            first.startTime
+              .localeCompare(
+                second.startTime
+              )
+        )
+    : [];
+
 
 const handlePreviousWeek =
   () => {
@@ -874,6 +989,48 @@ const handleToday =
     );
   };
 
+const handleGenerateSchedule =
+  () => {
+    setScheduleError(
+      ""
+    );
+
+
+    const generation =
+      generateWeeklySchedule(
+        studyData,
+        weekStartKey
+      );
+
+
+    setGeneratedWeekStart(
+      weekStartKey
+    );
+
+
+    if (
+      !generation.valid ||
+      !generation.result
+    ) {
+      setGeneratedSchedule(
+        null
+      );
+
+
+      setScheduleError(
+        generation.error ||
+          "CozyCram could not safely generate this schedule."
+      );
+
+
+      return;
+    }
+
+
+    setGeneratedSchedule(
+      generation.result
+    );
+  };
 
   return (
     <section
@@ -1327,6 +1484,145 @@ const dayIsAvailable =
     )}
   </div>
 
+<section
+  className="planner-generation"
+  aria-labelledby="planner-generation-title"
+>
+  <div className="planner-generation__header">
+    <div>
+      <p>
+        WEEKLY SCHEDULE
+      </p>
+
+      <h3 id="planner-generation-title">
+        {activeSchedule
+          ? "Your generated study plan"
+          : "Generate your study plan"}
+      </h3>
+
+      <span>
+        CozyCram uses your real tasks,
+        deadlines, priorities,
+        availability and focus preference.
+      </span>
+    </div>
+
+
+    <button
+      type="button"
+      className="planner-generate-button"
+      onClick={
+        handleGenerateSchedule
+      }
+      disabled={
+        !canGenerateSchedule
+      }
+    >
+      {activeSchedule
+        ? "Regenerate schedule"
+        : "Generate schedule"}
+    </button>
+  </div>
+
+
+  {!canGenerateSchedule && (
+    <div className="planner-generation__notice">
+      <strong>
+        Nothing can be generated yet.
+      </strong>
+
+      <p>
+        Add at least one subject and
+        one open task before generating
+        a study plan.
+      </p>
+    </div>
+  )}
+
+
+  {activeScheduleError && (
+    <div
+      className="planner-generation__error"
+      role="alert"
+    >
+      <strong>
+        Schedule generation failed.
+      </strong>
+
+      <p>
+        {activeScheduleError}
+      </p>
+    </div>
+  )}
+
+
+  {activeSchedule && (
+    <div className="planner-generation__summary">
+      <article>
+        <span>
+          Open tasks
+        </span>
+
+        <strong>
+          {
+            activeSchedule
+              .summary
+              .totalOpenTasks
+          }
+        </strong>
+      </article>
+
+
+      <article>
+        <span>
+          Scheduled time
+        </span>
+
+        <strong>
+          {
+            formatDuration(
+              activeSchedule
+                .summary
+                .scheduledMinutes
+            )
+          }
+        </strong>
+      </article>
+
+
+      <article>
+        <span>
+          Tasks with study time
+        </span>
+
+        <strong>
+          {
+            activeSchedule
+              .summary
+              .scheduledTasks
+          }
+        </strong>
+      </article>
+
+
+      <article>
+        <span>
+          Unscheduled work
+        </span>
+
+        <strong>
+          {
+            formatDuration(
+              activeSchedule
+                .summary
+                .unscheduledMinutes
+            )
+          }
+        </strong>
+      </article>
+    </div>
+  )}
+</section>
 
   <section
     className="planner-selected-day"
@@ -1604,43 +1900,273 @@ const dayIsAvailable =
   </section>
 
 
-  <div className="planner-selected-day__empty">
-    <CalendarDays
-      size={22}
-      strokeWidth={1.8}
-      aria-hidden="true"
-    />
-
+<section
+  className="planner-generated-blocks"
+  aria-labelledby="planner-generated-blocks-title"
+>
+  <div className="planner-selected-day__section-heading">
     <div>
-      <strong>
-        No generated study blocks yet.
-      </strong>
-
       <p>
-  {selectedDayIsAvailable
-    ? (
-        <>
-          This day has saved study
-          availability. CozyCram's
-          scheduling engine will decide
-          how real tasks fit inside that
-          window in the next scheduling
-          stage.
-        </>
-      )
-    : (
-        <>
-          No study window is currently
-          available on this day, so the
-          future scheduling engine should
-          not place study blocks here.
-        </>
-      )}
-</p>
+        STUDY BLOCKS
+      </p>
+
+      <h4 id="planner-generated-blocks-title">
+        Generated study plan
+      </h4>
     </div>
+
+    {activeSchedule && (
+      <span>
+        {
+          selectedDateBlocks.length
+        }
+      </span>
+    )}
   </div>
+
+
+  {!activeSchedule ? (
+    <div className="planner-selected-day__empty">
+      <CalendarDays
+        size={22}
+        strokeWidth={1.8}
+        aria-hidden="true"
+      />
+
+      <div>
+        <strong>
+          No generated study blocks yet.
+        </strong>
+
+        <p>
+          Generate this week's schedule
+          to let CozyCram place real open
+          tasks inside your saved study
+          availability.
+        </p>
+      </div>
+    </div>
+  ) : selectedDateBlocks.length === 0 ? (
+    <div className="planner-selected-day__empty">
+      <CalendarDays
+        size={22}
+        strokeWidth={1.8}
+        aria-hidden="true"
+      />
+
+      <div>
+        <strong>
+          No study blocks were generated
+          for this day.
+        </strong>
+
+        <p>
+          CozyCram found no task placement
+          for this date within the generated
+          weekly plan.
+        </p>
+      </div>
+    </div>
+  ) : (
+    <div className="planner-generated-block-list">
+      {selectedDateBlocks.map(
+        (block) => {
+          const task =
+            plannerTaskMap.get(
+              String(
+                block.taskId
+              )
+            );
+
+
+          const subjectName =
+            taskSubjectMap.get(
+              String(
+                block.subjectId
+              )
+            ) ||
+            "Unknown subject";
+
+
+          return (
+            <article
+              key={block.id}
+              className="planner-generated-block"
+            >
+              <div className="planner-generated-block__time">
+                <strong>
+                  {block.startTime}
+                </strong>
+
+                <span>
+                  {block.endTime}
+                </span>
+              </div>
+
+
+              <div className="planner-generated-block__main">
+                <strong>
+                  {
+                    task?.title ||
+                    "Unknown task"
+                  }
+                </strong>
+
+                <span>
+                  {subjectName}
+                  {" · "}
+                  {
+                    formatDuration(
+                      block.durationMinutes
+                    )
+                  }
+                </span>
+              </div>
+
+
+              {task && (
+                <Link
+                  to={`/planner/tasks/${task.id}`}
+                  className="planner-selected-task__link"
+                >
+                  View task
+                </Link>
+              )}
+            </article>
+          );
+        }
+      )}
+    </div>
+  )}
+</section>
 </div>
   </section>
+  {activeSchedule &&
+  activeSchedule
+    .unscheduled
+    .length > 0 && (
+    <section
+      className="planner-unscheduled"
+      aria-labelledby="planner-unscheduled-title"
+    >
+      <div className="planner-section-heading">
+        <div>
+          <p>
+            UNSCHEDULED WORK
+          </p>
+
+          <h3 id="planner-unscheduled-title">
+            Work that could not fit
+          </h3>
+
+          <span>
+            CozyCram never hides work that
+            could not be placed safely.
+          </span>
+        </div>
+      </div>
+
+
+      <div className="planner-unscheduled__list">
+        {activeSchedule
+          .unscheduled
+          .map(
+            (item) => {
+              const task =
+                plannerTaskMap.get(
+                  String(
+                    item.taskId
+                  )
+                );
+
+
+              return (
+                <article
+                  key={
+                    item.taskId
+                  }
+                  className="planner-unscheduled-item"
+                >
+                  <div>
+                    <strong>
+                      {
+                        task?.title ||
+                        "Unknown task"
+                      }
+                    </strong>
+
+                    <span>
+                      {
+                        formatDuration(
+                          item.remainingMinutes
+                        )
+                      }
+                      {" "}
+                      remaining
+                    </span>
+                  </div>
+
+
+                  <p>
+                    {
+                      getUnscheduledReasonCopy(
+                        item.reason
+                      )
+                    }
+                  </p>
+
+
+                  {task && (
+                    <Link
+                      to={`/planner/tasks/${task.id}`}
+                      className="planner-context-link"
+                    >
+                      View task
+
+                      <ArrowRight
+                        size={17}
+                        aria-hidden="true"
+                      />
+                    </Link>
+                  )}
+                </article>
+              );
+            }
+          )}
+      </div>
+    </section>
+  )}
+  {activeSchedule &&
+  activeSchedule
+    .summary
+    .totalOpenTasks > 0 &&
+  activeSchedule
+    .unscheduled
+    .length === 0 && (
+    <div
+      className="planner-schedule-complete"
+      role="status"
+    >
+      <CheckCircle2
+        size={20}
+        strokeWidth={1.8}
+        aria-hidden="true"
+      />
+
+      <div>
+        <strong>
+          All current open work fits
+          inside this generated plan.
+        </strong>
+
+        <p>
+          Every estimated task minute
+          was accounted for by the
+          scheduling engine.
+        </p>
+      </div>
+    </div>
+  )}
 </section>
 
     <section
