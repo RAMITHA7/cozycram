@@ -1425,6 +1425,52 @@
     var(--radius-md);
 }
 
+.planner-generation__status {
+  display: flex;
+  align-items: flex-start;
+
+  gap:
+    var(--space-2);
+
+  margin-top:
+    var(--space-3);
+
+  padding:
+    var(--space-3);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--color-focus) 8%,
+      var(--color-surface-1)
+    );
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+
+  line-height: 1.5;
+}
+
+
+.planner-generation__status
+> svg {
+  flex: 0 0 auto;
+
+  margin-top: 1px;
+
+  color:
+    var(--color-focus);
+}
 
 .planner-generation__notice {
   background:
@@ -1581,6 +1627,271 @@ span {
     var(--text-caption);
 }
 
+/* =========================================================
+   WHY THIS?
+   ========================================================= */
+
+.planner-why {
+  grid-column:
+    1 / -1;
+
+  min-width: 0;
+
+  margin-top:
+    var(--space-1);
+
+  padding-top:
+    var(--space-2);
+
+  border-top:
+    1px solid
+    var(--color-divider);
+}
+
+.planner-why
+> summary {
+  min-height: 44px;
+
+  display: inline-flex;
+  align-items: center;
+
+  gap:
+    var(--space-2);
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-body-sm);
+
+  font-weight:
+    var(--font-weight-semibold);
+
+  cursor:
+    pointer;
+
+  list-style:
+    none;
+}
+
+.planner-why
+> summary:hover {
+  color:
+    var(--color-text-primary);
+}
+
+.planner-why[open]
+> summary {
+  color:
+    var(--color-text-primary);
+}
+
+.planner-why
+> summary::-webkit-details-marker {
+  display: none;
+}
+
+
+.planner-why
+> summary::after {
+  content:
+    "+";
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 22px;
+  height: 22px;
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    50%;
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    16px;
+
+  line-height:
+    1;
+}
+
+
+.planner-why[open]
+> summary::after {
+  content:
+    "−";
+}
+
+
+.planner-why
+> summary:focus-visible {
+  outline:
+    2px solid
+    var(--color-brand);
+
+  outline-offset:
+    3px;
+
+  border-radius:
+    var(--radius-sm);
+}
+
+.planner-why__content {
+  margin-top:
+    var(--space-2);
+
+  padding:
+    var(--space-4);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+}
+
+
+.planner-why__intro {
+  max-width:
+    680px;
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+
+  line-height:
+    1.55;
+}
+
+.planner-why__factors {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(0, 1fr)
+    );
+
+  gap:
+    var(--space-3);
+
+  margin-top:
+    var(--space-3);
+}
+
+
+.planner-why__factor {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-1);
+
+  padding:
+    var(--space-3);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-1);
+}
+
+
+.planner-why__factor
+> span {
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+
+  font-weight:
+    var(--font-weight-medium);
+}
+
+
+.planner-why__factor
+> strong {
+  overflow-wrap:
+    anywhere;
+
+  color:
+    var(--color-text-primary);
+
+  font-size:
+    var(--text-body-sm);
+}
+
+.planner-why__placement {
+  margin-top:
+    var(--space-3);
+
+  padding-top:
+    var(--space-3);
+
+  border-top:
+    1px solid
+    var(--color-divider);
+
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+
+  line-height:
+    1.5;
+}
+
+.planner-unscheduled-why {
+  margin-top:
+    var(--space-3);
+}
+
+
+.planner-unscheduled-why__title {
+  display: block;
+
+  color:
+    var(--color-text-primary);
+
+  font-size:
+    var(--text-body-sm);
+}
+
+
+.planner-unscheduled-why__message {
+  margin-top:
+    var(--space-2);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+
+  line-height:
+    1.55;
+}
 /* =========================================================
    UNSCHEDULED WORK
    ========================================================= */
@@ -3143,5 +3454,30 @@ span {
 > div:first-child {
   flex-direction:
     column;
+}
+
+.planner-why {
+  width: 100%;
+}
+
+
+.planner-why
+> summary {
+  width: 100%;
+
+  justify-content:
+    space-between;
+}
+
+
+.planner-why__factors {
+  grid-template-columns:
+    1fr;
+}
+
+
+.planner-why__content {
+  padding:
+    var(--space-3);
 }
 }

@@ -22,6 +22,7 @@ import {
 } from "../../services/studyDataService.js";
 
 import {
+  EXPLANATION_FACTOR_TYPE,
   generateWeeklySchedule,
   UNSCHEDULED_REASON,
 } from "../../services/schedulingEngine.js";
@@ -200,6 +201,39 @@ const getUnscheduledReasonCopy = (
 
 
   return "Some of this work could not be scheduled.";
+};
+
+const getExplanationFactorHeading = (
+  type
+) => {
+  if (
+    type ===
+    EXPLANATION_FACTOR_TYPE
+      .DEADLINE
+  ) {
+    return "Deadline";
+  }
+
+
+  if (
+    type ===
+    EXPLANATION_FACTOR_TYPE
+      .USER_PRIORITY
+  ) {
+    return "Priority";
+  }
+
+
+  if (
+    type ===
+    EXPLANATION_FACTOR_TYPE
+      .WORKLOAD
+  ) {
+    return "Workload";
+  }
+
+
+  return "Scheduling factor";
 };
 
 const addDays = (
@@ -516,6 +550,12 @@ const [
   ""
 );
 
+const [
+  scheduleNotice,
+  setScheduleNotice,
+] = useState(
+  ""
+);
   const studyData =
     initialData.data;
 
@@ -935,6 +975,12 @@ const activeScheduleError =
     ? scheduleError
     : "";
 
+    const activeScheduleNotice =
+  generatedWeekStart ===
+    weekStartKey
+    ? scheduleNotice
+    : "";
+
 const selectedDateBlocks =
   activeSchedule
     ? activeSchedule.blocks
@@ -988,10 +1034,22 @@ const handleToday =
       )
     );
   };
-
-const handleGenerateSchedule =
+  const handleGenerateSchedule =
   () => {
+    const isRegeneration =
+      generatedWeekStart ===
+        weekStartKey &&
+      Boolean(
+        generatedSchedule
+      );
+
+
     setScheduleError(
+      ""
+    );
+
+
+    setScheduleNotice(
       ""
     );
 
@@ -1029,6 +1087,13 @@ const handleGenerateSchedule =
 
     setGeneratedSchedule(
       generation.result
+    );
+
+
+    setScheduleNotice(
+      isRegeneration
+        ? "Schedule regenerated using your current planning inputs."
+        : "Schedule generated using your current planning inputs."
     );
   };
 
@@ -1555,6 +1620,23 @@ const dayIsAvailable =
     </div>
   )}
 
+  {activeScheduleNotice && (
+  <div
+    className="planner-generation__status"
+    role="status"
+    aria-live="polite"
+  >
+    <CheckCircle2
+      size={18}
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
+
+    <span>
+      {activeScheduleNotice}
+    </span>
+  </div>
+)}
 
   {activeSchedule && (
     <div className="planner-generation__summary">
@@ -1987,6 +2069,14 @@ const dayIsAvailable =
             ) ||
             "Unknown subject";
 
+          const explanationFactors =
+  Array.isArray(
+    block.explanation
+      ?.factors
+  )
+    ? block.explanation
+        .factors
+    : [];
 
           return (
             <article
@@ -2032,6 +2122,57 @@ const dayIsAvailable =
                   View task
                 </Link>
               )}
+              {explanationFactors.length > 0 && (
+  <details className="planner-why">
+    <summary>
+      Why this?
+    </summary>
+
+
+    <div className="planner-why__content">
+      <p className="planner-why__intro">
+        CozyCram prioritized this task
+        using the same factors that
+        influenced the scheduling
+        algorithm.
+      </p>
+
+
+      <div className="planner-why__factors">
+        {explanationFactors.map(
+          (
+            factor,
+            factorIndex
+          ) => (
+            <div
+              key={`${block.id}-${factor.type}-${factorIndex}`}
+              className="planner-why__factor"
+            >
+              <span>
+                {
+                  getExplanationFactorHeading(
+                    factor.type
+                  )
+                }
+              </span>
+
+              <strong>
+                {factor.label}
+              </strong>
+            </div>
+          )
+        )}
+      </div>
+
+
+      <p className="planner-why__placement">
+        The exact study time comes from
+        your saved availability and focus
+        settings.
+      </p>
+    </div>
+  </details>
+)}
             </article>
           );
         }
@@ -2115,7 +2256,31 @@ const dayIsAvailable =
                     }
                   </p>
 
+                {item.explanation && (
+  <details className="planner-why planner-unscheduled-why">
+    <summary>
+      Why not scheduled?
+    </summary>
 
+
+    <div className="planner-why__content">
+      <strong className="planner-unscheduled-why__title">
+        {
+          item.explanation
+            .title
+        }
+      </strong>
+
+
+      <p className="planner-unscheduled-why__message">
+        {
+          item.explanation
+            .message
+        }
+      </p>
+    </div>
+  </details>
+)}
                   {task && (
                     <Link
                       to={`/planner/tasks/${task.id}`}

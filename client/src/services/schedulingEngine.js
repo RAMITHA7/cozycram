@@ -51,6 +51,33 @@ export const TASK_PRIORITY_SCORE = {
   low: 10,
 };
 
+export const EXPLANATION_FACTOR_TYPE = {
+  DEADLINE: "deadline",
+  USER_PRIORITY: "user_priority",
+  WORKLOAD: "workload",
+};
+
+export const EXPLANATION_REASON = {
+  OVERDUE: "overdue",
+  DUE_TODAY: "due_today",
+  DUE_SOON: "due_soon",
+  UPCOMING_DEADLINE:
+    "upcoming_deadline",
+  UNDATED: "undated",
+  INVALID_DEADLINE:
+    "invalid_deadline",
+
+  HIGH_PRIORITY:
+    "high_priority",
+  MEDIUM_PRIORITY:
+    "medium_priority",
+  LOW_PRIORITY:
+    "low_priority",
+
+  TASK_WORKLOAD:
+    "task_workload",
+};
+
 export const FOCUS_PRESET_CONFIG = {
   quick: {
     focusMinutes: 25,
@@ -635,6 +662,9 @@ export const placeRankedTasksIntoWindows = ({
     const task =
       rankedItem?.task;
 
+    const explanation =
+  rankedItem?.explanation ||
+  null;
 
     if (
       !task ||
@@ -801,26 +831,28 @@ export const placeRankedTasksIntoWindows = ({
 
 
         blocks.push(
-          createScheduleBlock({
-            id,
+  createScheduleBlock({
+    id,
 
-            taskId:
-              task.id,
+    taskId:
+      task.id,
 
-            subjectId:
-              task.subjectId,
+    subjectId:
+      task.subjectId,
 
-            date:
-              windowState.date,
+    date:
+      windowState.date,
 
-            startTime,
+    startTime,
 
-            endTime,
+    endTime,
 
-            durationMinutes:
-              blockDuration,
-          })
-        );
+    durationMinutes:
+      blockDuration,
+
+    explanation,
+  })
+);
 
 
         blockSequence += 1;
@@ -1380,6 +1412,639 @@ export const calculateTaskWorkloadScore = (
   );
 };
 
+const formatExplanationDuration = (
+  minutes
+) => {
+  const numericMinutes =
+    Number(
+      minutes
+    );
+
+
+  if (
+    !Number.isFinite(
+      numericMinutes
+    ) ||
+    numericMinutes <= 0
+  ) {
+    return "No estimated workload";
+  }
+
+
+  const wholeMinutes =
+    Math.floor(
+      numericMinutes
+    );
+
+
+  const hours =
+    Math.floor(
+      wholeMinutes / 60
+    );
+
+
+  const remainingMinutes =
+    wholeMinutes % 60;
+
+
+  if (
+    hours > 0 &&
+    remainingMinutes > 0
+  ) {
+    return `${hours}h ${remainingMinutes}m estimated work`;
+  }
+
+
+  if (
+    hours > 0
+  ) {
+    return `${hours}h estimated work`;
+  }
+
+
+  return `${remainingMinutes} min estimated work`;
+};
+
+const createDeadlineExplanationFactor = (
+  score
+) => {
+  if (
+    score.dueState ===
+    TASK_DUE_STATE.OVERDUE
+  ) {
+    const overdueDays =
+      Math.abs(
+        score.daysUntilDue
+      );
+
+
+    return {
+      type:
+        EXPLANATION_FACTOR_TYPE
+          .DEADLINE,
+
+      reason:
+        EXPLANATION_REASON
+          .OVERDUE,
+
+      label:
+        overdueDays === 1
+          ? "1 day overdue"
+          : `${overdueDays} days overdue`,
+
+      score:
+        score.deadlineScore,
+    };
+  }
+
+
+  if (
+    score.dueState ===
+    TASK_DUE_STATE.TODAY
+  ) {
+    return {
+      type:
+        EXPLANATION_FACTOR_TYPE
+          .DEADLINE,
+
+      reason:
+        EXPLANATION_REASON
+          .DUE_TODAY,
+
+      label:
+        "Due at the start of this scheduling week",
+
+      score:
+        score.deadlineScore,
+    };
+  }
+
+
+  if (
+    score.dueState ===
+    TASK_DUE_STATE.UPCOMING
+  ) {
+    const days =
+      score.daysUntilDue;
+
+
+    return {
+      type:
+        EXPLANATION_FACTOR_TYPE
+          .DEADLINE,
+
+      reason:
+        days <= 3
+          ? EXPLANATION_REASON
+              .DUE_SOON
+          : EXPLANATION_REASON
+              .UPCOMING_DEADLINE,
+
+      label:
+        days === 1
+          ? "Due in 1 day"
+          : `Due in ${days} days`,
+
+      score:
+        score.deadlineScore,
+    };
+  }
+
+
+  if (
+    score.dueState ===
+    TASK_DUE_STATE.UNDATED
+  ) {
+    return {
+      type:
+        EXPLANATION_FACTOR_TYPE
+          .DEADLINE,
+
+      reason:
+        EXPLANATION_REASON
+          .UNDATED,
+
+      label:
+        "No due date",
+
+      score:
+        score.deadlineScore,
+    };
+  }
+
+
+  return {
+    type:
+      EXPLANATION_FACTOR_TYPE
+        .DEADLINE,
+
+    reason:
+      EXPLANATION_REASON
+        .INVALID_DEADLINE,
+
+    label:
+      "Deadline could not be interpreted",
+
+    score:
+      score.deadlineScore,
+  };
+};
+
+const createPriorityExplanationFactor = (
+  task,
+  score
+) => {
+  const priority =
+    String(
+      task?.priority ?? ""
+    )
+      .trim()
+      .toLowerCase();
+
+
+  if (
+    priority === "high"
+  ) {
+    return {
+      type:
+        EXPLANATION_FACTOR_TYPE
+          .USER_PRIORITY,
+
+      reason:
+        EXPLANATION_REASON
+          .HIGH_PRIORITY,
+
+      label:
+        "High priority",
+
+      score:
+        score.priorityScore,
+    };
+  }
+
+
+  if (
+    priority === "medium"
+  ) {
+    return {
+      type:
+        EXPLANATION_FACTOR_TYPE
+          .USER_PRIORITY,
+
+      reason:
+        EXPLANATION_REASON
+          .MEDIUM_PRIORITY,
+
+      label:
+        "Medium priority",
+
+      score:
+        score.priorityScore,
+    };
+  }
+
+
+  return {
+    type:
+      EXPLANATION_FACTOR_TYPE
+        .USER_PRIORITY,
+
+    reason:
+      EXPLANATION_REASON
+        .LOW_PRIORITY,
+
+    label:
+      "Low priority",
+
+    score:
+      score.priorityScore,
+  };
+};
+
+const createWorkloadExplanationFactor = (
+  task,
+  score
+) => ({
+  type:
+    EXPLANATION_FACTOR_TYPE
+      .WORKLOAD,
+
+  reason:
+    EXPLANATION_REASON
+      .TASK_WORKLOAD,
+
+  label:
+    formatExplanationDuration(
+      task?.estimatedMinutes
+    ),
+
+  score:
+    score.workloadScore,
+});
+
+export const createTaskSchedulingExplanation = (
+  task,
+  score
+) => {
+  if (
+    !task ||
+    !score
+  ) {
+    return null;
+  }
+
+
+  const factors = [
+    createDeadlineExplanationFactor(
+      score
+    ),
+
+    createPriorityExplanationFactor(
+      task,
+      score
+    ),
+
+    createWorkloadExplanationFactor(
+      task,
+      score
+    ),
+  ];
+
+
+  return {
+    taskId:
+      task.id,
+
+    totalScore:
+      score.totalScore,
+
+    factors,
+  };
+};
+
+export const copyTaskSchedulingExplanation = (
+  explanation
+) => {
+  if (
+    !explanation ||
+    typeof explanation !==
+      "object"
+  ) {
+    return null;
+  }
+
+
+  const factors =
+    Array.isArray(
+      explanation.factors
+    )
+      ? explanation.factors
+          .map(
+            (factor) => ({
+              ...factor,
+            })
+          )
+      : [];
+
+
+  return {
+    taskId:
+      explanation.taskId,
+
+    totalScore:
+      Number(
+        explanation.totalScore
+      ) || 0,
+
+    factors,
+  };
+};
+
+const doExplanationFactorsMatch = (
+  actualFactors,
+  expectedFactors
+) => {
+  if (
+    !Array.isArray(
+      actualFactors
+    ) ||
+    !Array.isArray(
+      expectedFactors
+    ) ||
+    actualFactors.length !==
+      expectedFactors.length
+  ) {
+    return false;
+  }
+
+
+  return actualFactors.every(
+    (
+      actual,
+      index
+    ) => {
+      const expected =
+        expectedFactors[
+          index
+        ];
+
+
+      return (
+        actual.type ===
+          expected.type &&
+        actual.reason ===
+          expected.reason &&
+        actual.label ===
+          expected.label &&
+        Number(
+          actual.score
+        ) ===
+          Number(
+            expected.score
+          )
+      );
+    }
+  );
+};
+
+export const validateTaskSchedulingExplanation = ({
+  task,
+  explanation,
+  referenceDateKey,
+}) => {
+  if (
+    !task ||
+    !explanation
+  ) {
+    return false;
+  }
+
+
+  if (
+    String(
+      task.id
+    ) !==
+    String(
+      explanation.taskId
+    )
+  ) {
+    return false;
+  }
+
+
+  const score =
+    scoreTaskForScheduling(
+      task,
+      referenceDateKey
+    );
+
+
+  const expected =
+    createTaskSchedulingExplanation(
+      task,
+      score
+    );
+
+
+  if (
+    !expected
+  ) {
+    return false;
+  }
+
+
+  return (
+    Number(
+      explanation.totalScore
+    ) ===
+      Number(
+        expected.totalScore
+      ) &&
+    doExplanationFactorsMatch(
+      explanation.factors,
+      expected.factors
+    )
+  );
+};
+
+export const validateUnscheduledWorkExplanation = ({
+  task,
+  item,
+}) => {
+  if (
+    !task ||
+    !item ||
+    !item.explanation
+  ) {
+    return false;
+  }
+
+
+  if (
+    String(
+      task.id
+    ) !==
+    String(
+      item.taskId
+    ) ||
+    String(
+      task.id
+    ) !==
+    String(
+      item.explanation.taskId
+    )
+  ) {
+    return false;
+  }
+
+
+  if (
+    item.reason !==
+    item.explanation.reason
+  ) {
+    return false;
+  }
+
+
+  const expected =
+    createUnscheduledWorkExplanation({
+      task,
+
+      reason:
+        item.reason,
+    });
+
+
+  if (
+    !expected
+  ) {
+    return false;
+  }
+
+
+  return (
+    expected.reason ===
+      item.explanation.reason &&
+    expected.title ===
+      item.explanation.title &&
+    expected.message ===
+      item.explanation.message
+  );
+};
+
+export const validateScheduleExplanations = ({
+  tasks,
+  blocks,
+  unscheduled,
+  referenceDateKey,
+}) => {
+  const safeTasks =
+    Array.isArray(
+      tasks
+    )
+      ? tasks
+      : [];
+
+
+  const safeBlocks =
+    Array.isArray(
+      blocks
+    )
+      ? blocks
+      : [];
+
+
+  const safeUnscheduled =
+    Array.isArray(
+      unscheduled
+    )
+      ? unscheduled
+      : [];
+
+
+  const taskMap =
+    new Map(
+      safeTasks.map(
+        (task) => [
+          String(
+            task.id
+          ),
+
+          task,
+        ]
+      )
+    );
+
+
+  for (
+    const block
+    of safeBlocks
+  ) {
+    const task =
+      taskMap.get(
+        String(
+          block.taskId
+        )
+      );
+
+
+    if (
+      !task ||
+      !validateTaskSchedulingExplanation({
+        task,
+
+        explanation:
+          block.explanation,
+
+        referenceDateKey,
+      })
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "A generated study block contains explanation data that does not match its scheduling decision.",
+      };
+    }
+  }
+
+
+  for (
+    const item
+    of safeUnscheduled
+  ) {
+    const task =
+      taskMap.get(
+        String(
+          item.taskId
+        )
+      );
+
+
+    if (
+      !task ||
+      !validateUnscheduledWorkExplanation({
+        task,
+        item,
+      })
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "Unscheduled work contains explanation data that does not match its scheduling result.",
+      };
+    }
+  }
+
+
+  return {
+    valid: true,
+
+    error: "",
+  };
+};
+
 export const scoreTaskForScheduling = (
   task,
   referenceDateKey
@@ -1574,29 +2239,38 @@ export const rankTasksForScheduling = (
           "todo"
       )
       .map(
-        (task) => {
-          const score =
-            scoreTaskForScheduling(
-              task,
-              snapshot.weekStart
-            );
+  (task) => {
+    const score =
+      scoreTaskForScheduling(
+        task,
+        snapshot.weekStart
+      );
 
 
-          return {
-            task: {
-              ...task,
-            },
+    const explanation =
+      createTaskSchedulingExplanation(
+        task,
+        score
+      );
 
-            score,
 
-            reasons:
-              explainTaskSchedulingPriority(
-                task,
-                score
-              ),
-          };
-        }
-      )
+    return {
+      task: {
+        ...task,
+      },
+
+      score,
+
+      reasons:
+        explainTaskSchedulingPriority(
+          task,
+          score
+        ),
+
+      explanation,
+    };
+  }
+)
       .sort(
         (
           first,
@@ -2426,8 +3100,8 @@ export const summarizeCandidateWindows = (
    SCHEDULE BLOCK CONTRACT
    ========================================================= */
 
-/*
-  A real generated study block will eventually look like:
+  /*
+  A real generated study block looks like:
 
   {
     id: "taskId-date-start-sequence",
@@ -2442,12 +3116,18 @@ export const summarizeCandidateWindows = (
 
     durationMinutes: 50,
 
-    status: "planned"
+    status: "planned",
+
+    explanation: {
+      taskId: 123,
+      totalScore: 930,
+      factors: [...]
+    }
   }
 
-  IMPORTANT:
-  Stage 1 defines the contract only.
-  We are NOT creating these blocks yet.
+  The explanation is derived from the exact scheduling score
+  used to rank the task. It must never be invented separately
+  by the Planner UI.
 */
 
 
@@ -2492,6 +3172,7 @@ export const createScheduleBlock = ({
   startTime,
   endTime,
   durationMinutes,
+  explanation = null,
 }) => ({
   id,
 
@@ -2509,6 +3190,11 @@ export const createScheduleBlock = ({
 
   status:
     SCHEDULE_BLOCK_STATUS.PLANNED,
+
+  explanation:
+    copyTaskSchedulingExplanation(
+      explanation
+    ),
 });
 
 
@@ -2531,17 +3217,135 @@ export const createScheduleBlock = ({
   }
 */
 
+export const createUnscheduledWorkExplanation = ({
+  task,
+  reason,
+}) => {
+  if (
+    !task ||
+    !reason
+  ) {
+    return null;
+  }
+
+
+  if (
+    reason ===
+    UNSCHEDULED_REASON
+      .NO_AVAILABILITY
+  ) {
+    return {
+      taskId:
+        task.id,
+
+      reason,
+
+      title:
+        "No usable study time",
+
+      message:
+        "This week has no usable study availability, so CozyCram had nowhere safe to place the remaining work.",
+    };
+  }
+
+
+  if (
+    reason ===
+    UNSCHEDULED_REASON
+      .INVALID_DEADLINE
+  ) {
+    return {
+      taskId:
+        task.id,
+
+      reason,
+
+      title:
+        "Deadline needs attention",
+
+      message:
+        "This task has a deadline CozyCram could not interpret safely, so the scheduler left the work unplaced instead of guessing.",
+    };
+  }
+
+
+  if (
+    reason ===
+    UNSCHEDULED_REASON
+      .INSUFFICIENT_CAPACITY
+  ) {
+    return {
+      taskId:
+        task.id,
+
+      reason,
+
+      title:
+        "Not enough eligible study time",
+
+      message:
+        "Some usable study time existed, but there was not enough eligible capacity to place every remaining estimated minute of this task.",
+    };
+  }
+
+
+  return {
+    taskId:
+      task.id,
+
+    reason,
+
+    title:
+      "Work could not be scheduled",
+
+    message:
+      "CozyCram could not safely place all of this task's remaining work.",
+  };
+};
+
+export const copyUnscheduledWorkExplanation = (
+  explanation
+) => {
+  if (
+    !explanation ||
+    typeof explanation !==
+      "object"
+  ) {
+    return null;
+  }
+
+
+  return {
+    taskId:
+      explanation.taskId,
+
+    reason:
+      explanation.reason,
+
+    title:
+      explanation.title,
+
+    message:
+      explanation.message,
+  };
+};
 
 export const createUnscheduledItem = ({
   taskId,
   remainingMinutes,
   reason,
+  explanation = null,
 }) => ({
   taskId,
 
   remainingMinutes,
 
   reason,
+
+  explanation:
+    copyUnscheduledWorkExplanation(
+      explanation
+    ),
 });
 
 export const createUnscheduledWork = ({
@@ -2596,29 +3400,41 @@ export const createUnscheduledWork = ({
           );
 
 
-        return createUnscheduledItem({
-          taskId:
-            item.taskId,
+        const remainingMinutes =
+  Math.max(
+    0,
+    Number(
+      item.remainingMinutes
+    ) || 0
+  );
 
-          remainingMinutes:
-            Math.max(
-              0,
-              Number(
-                item.remainingMinutes
-              ) || 0
-            ),
 
-          reason:
-            classifyUnscheduledReason({
-              task,
+const reason =
+  classifyUnscheduledReason({
+    task,
 
-              windows,
+    windows,
 
-              referenceDateKey:
-                snapshot.weekStart,
-            }),
-        });
-      }
+    referenceDateKey:
+      snapshot.weekStart,
+  });
+
+
+return createUnscheduledItem({
+  taskId:
+    item.taskId,
+
+  remainingMinutes,
+
+  reason,
+
+  explanation:
+    createUnscheduledWorkExplanation({
+      task,
+      reason,
+    }),
+});
+}
     );
 };
 
@@ -2655,23 +3471,34 @@ export const createFullyUnscheduledWork = ({
         task,
         remainingMinutes,
       }) =>
-        createUnscheduledItem({
-          taskId:
-            task.id,
+       (() => {
+  const reason =
+    classifyUnscheduledReason({
+      task,
 
-          remainingMinutes,
+      windows,
 
-          reason:
-            classifyUnscheduledReason({
-              task,
+      referenceDateKey:
+        snapshot.weekStart,
+    });
 
-              windows,
 
-              referenceDateKey:
-                snapshot.weekStart,
-            }),
-        })
-    );
+  return createUnscheduledItem({
+    taskId:
+      task.id,
+
+    remainingMinutes,
+
+    reason,
+
+    explanation:
+      createUnscheduledWorkExplanation({
+        task,
+        reason,
+      }),
+  });
+})()
+);
 };
 
 export const createScheduleSummary = ({
@@ -3008,7 +3835,33 @@ export const generateWeeklySchedule = (
       };
     }
 
+    const explanationValidation =
+  validateScheduleExplanations({
+    tasks:
+      snapshot.tasks,
 
+    blocks: [],
+
+    unscheduled,
+
+    referenceDateKey:
+      snapshot.weekStart,
+  });
+
+
+if (
+  !explanationValidation.valid
+) {
+  return {
+    valid: false,
+
+    error:
+      explanationValidation
+        .error,
+
+    result: null,
+  };
+}
     return {
       valid: true,
 
@@ -3140,6 +3993,34 @@ export const generateWeeklySchedule = (
     };
   }
 
+const explanationValidation =
+  validateScheduleExplanations({
+    tasks:
+      snapshot.tasks,
+
+    blocks:
+      placementResult.blocks,
+
+    unscheduled,
+
+    referenceDateKey:
+      snapshot.weekStart,
+  });
+
+
+if (
+  !explanationValidation.valid
+) {
+  return {
+    valid: false,
+
+    error:
+      explanationValidation
+        .error,
+
+    result: null,
+  };
+}
 
   /* -----------------------------------------
      FINAL RESULT
