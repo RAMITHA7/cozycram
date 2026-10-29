@@ -30,6 +30,192 @@ const WEEKDAY_LABELS = [
   "Sun",
 ];
 
+const WEEKDAY_KEYS = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
+
+
+const normalizeWeekdayKey = (
+  value
+) =>
+  String(
+    value ?? ""
+  )
+    .trim()
+    .toLowerCase();
+
+
+const getWeekdayKeyFromDate = (
+  date
+) =>
+  WEEKDAY_KEYS[
+    date.getDay()
+  ];
+
+  const getAvailabilityForDate = (
+  availability,
+  date
+) => {
+  const weekdayKey =
+    getWeekdayKeyFromDate(
+      date
+    );
+
+
+  return (
+    availability.find(
+      (day) =>
+        normalizeWeekdayKey(
+          day.id
+        ) ===
+          weekdayKey ||
+        normalizeWeekdayKey(
+          day.label
+        ) ===
+          weekdayKey
+    ) ||
+    null
+  );
+};
+
+const TIME_PATTERN =
+  /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+
+const timeToMinutes = (
+  value
+) => {
+  const normalized =
+    String(
+      value ?? ""
+    ).trim();
+
+
+  if (
+    !TIME_PATTERN.test(
+      normalized
+    )
+  ) {
+    return null;
+  }
+
+
+  const [
+    hours,
+    minutes,
+  ] =
+    normalized
+      .split(":")
+      .map(Number);
+
+
+  return (
+    hours * 60 +
+    minutes
+  );
+};
+
+const getAvailabilityDurationMinutes = (
+  availabilityDay
+) => {
+  if (
+    !availabilityDay?.enabled
+  ) {
+    return 0;
+  }
+
+
+  const startMinutes =
+    timeToMinutes(
+      availabilityDay.start
+    );
+
+
+  const endMinutes =
+    timeToMinutes(
+      availabilityDay.end
+    );
+
+
+  if (
+    startMinutes === null ||
+    endMinutes === null ||
+    endMinutes <=
+      startMinutes
+  ) {
+    return 0;
+  }
+
+
+  return (
+    endMinutes -
+    startMinutes
+  );
+};
+
+const getAvailabilityContext = (
+  availability,
+  date
+) => {
+  const day =
+    getAvailabilityForDate(
+      availability,
+      date
+    );
+
+
+  if (
+    !day
+  ) {
+    return {
+      status: "missing",
+      day: null,
+      durationMinutes: 0,
+    };
+  }
+
+
+  if (
+    !day.enabled
+  ) {
+    return {
+      status: "disabled",
+      day,
+      durationMinutes: 0,
+    };
+  }
+
+
+  const durationMinutes =
+    getAvailabilityDurationMinutes(
+      day
+    );
+
+
+  if (
+    durationMinutes <= 0
+  ) {
+    return {
+      status: "invalid",
+      day,
+      durationMinutes: 0,
+    };
+  }
+
+
+  return {
+    status: "available",
+    day,
+    durationMinutes,
+  };
+};
+
 const PRIORITY_WEIGHT = {
   high: 3,
   medium: 2,
@@ -353,6 +539,12 @@ function CalendarPage() {
       ? studyData.tasks
       : [];
 
+   const availability =
+  Array.isArray(
+    studyData?.availability
+  )
+    ? studyData.availability
+    : [];
 
   const openTasks =
     tasks.filter(
@@ -461,6 +653,15 @@ function CalendarPage() {
       ),
     0
   );
+
+  const selectedAvailability =
+  getAvailabilityContext(
+    availability,
+    selectedDate
+  );
+
+  const selectedAvailabilityDay =
+  selectedAvailability.day;
 
   const handlePreviousMonth =
     () => {
@@ -780,6 +981,26 @@ function CalendarPage() {
     dateKey
   ) || 0;
 
+                const dateAvailability =
+  getAvailabilityContext(
+    availability,
+    date
+  );
+
+
+const hasStudyAvailability =
+  dateAvailability.status ===
+  "available";
+
+const availabilityAriaText =
+  dateAvailability.status ===
+  "available"
+    ? `, study availability ${dateAvailability.day.start} to ${dateAvailability.day.end}`
+    : dateAvailability.status ===
+        "invalid"
+      ? ", saved study availability needs attention"
+      : ", no study availability";
+
               return (
                 <button
                   key={
@@ -804,7 +1025,7 @@ function CalendarPage() {
                   aria-pressed={
                     isSelected
                   }
-                  aria-label={`${formatSelectedDate(
+                 aria-label={`${formatSelectedDate(
   date
 )}${
   dueCount > 0
@@ -814,7 +1035,7 @@ function CalendarPage() {
           : "tasks"
       } due`
     : ", no open tasks due"
-}`}
+}${availabilityAriaText}`}
                 >
                   <span className="calendar-day__number">
                     {
@@ -828,14 +1049,28 @@ function CalendarPage() {
                       Today
                     </span>
                   )}
-                  {dueCount > 0 && (
+                  {(
+  dueCount > 0 ||
+  hasStudyAvailability
+) && (
   <span
-    className="calendar-day__due"
+    className="calendar-day__indicators"
     aria-hidden="true"
   >
-    {dueCount === 1
-      ? "1 due"
-      : `${dueCount} due`}
+    {dueCount > 0 && (
+      <span className="calendar-day__due">
+        {dueCount === 1
+          ? "1 due"
+          : `${dueCount} due`}
+      </span>
+    )}
+
+
+    {hasStudyAvailability && (
+      <span className="calendar-day__availability">
+        Available
+      </span>
+    )}
   </span>
 )}
                 </button>
@@ -1007,6 +1242,167 @@ function CalendarPage() {
           );
         }
       )}
+    </div>
+  )}
+</section>
+<section
+  className="calendar-selected__availability"
+  aria-labelledby="calendar-selected-availability-title"
+>
+  <div className="calendar-selected__availability-heading">
+    <div>
+      <p>
+        STUDY AVAILABILITY
+      </p>
+
+      <h3 id="calendar-selected-availability-title">
+        Saved study window
+      </h3>
+    </div>
+
+
+    {selectedAvailability.status ===
+      "available" && (
+      <span>
+        Available
+      </span>
+    )}
+  </div>
+
+
+  {selectedAvailability.status ===
+    "available" && (
+    <div className="calendar-selected__availability-card">
+      <div>
+        <strong>
+          {
+            selectedAvailabilityDay.start
+          }
+          {" – "}
+          {
+            selectedAvailabilityDay.end
+          }
+        </strong>
+
+        <p>
+          {
+            formatDuration(
+              selectedAvailability
+                .durationMinutes
+            )
+          }
+          {" "}
+          saved for study on
+          {" "}
+          {
+            selectedAvailabilityDay.label
+          }.
+        </p>
+      </div>
+
+
+      <Link
+        to="/planner/availability"
+        className="calendar-selected__availability-link"
+      >
+        Edit availability
+      </Link>
+    </div>
+  )}
+
+
+  {selectedAvailability.status ===
+    "disabled" && (
+    <div className="calendar-selected__availability-empty">
+      <CalendarDays
+        size={22}
+        strokeWidth={1.8}
+        aria-hidden="true"
+      />
+
+      <div>
+        <strong>
+          Study availability is off
+          for this day.
+        </strong>
+
+        <p>
+          This weekday is currently
+          disabled in your saved
+          availability.
+        </p>
+
+        <Link
+          to="/planner/availability"
+          className="calendar-selected__availability-link"
+        >
+          Edit availability
+        </Link>
+      </div>
+    </div>
+  )}
+
+
+  {selectedAvailability.status ===
+    "missing" && (
+    <div className="calendar-selected__availability-empty">
+      <CalendarDays
+        size={22}
+        strokeWidth={1.8}
+        aria-hidden="true"
+      />
+
+      <div>
+        <strong>
+          No saved availability for
+          this weekday.
+        </strong>
+
+        <p>
+          CozyCram does not have a
+          study window saved for this
+          day.
+        </p>
+
+        <Link
+          to="/planner/availability"
+          className="calendar-selected__availability-link"
+        >
+          Set availability
+        </Link>
+      </div>
+    </div>
+  )}
+
+
+  {selectedAvailability.status ===
+    "invalid" && (
+    <div className="calendar-selected__availability-empty">
+      <CalendarDays
+        size={22}
+        strokeWidth={1.8}
+        aria-hidden="true"
+      />
+
+      <div>
+        <strong>
+          Availability needs
+          attention.
+        </strong>
+
+        <p>
+          The saved start and end
+          times do not form a valid
+          study window.
+        </p>
+
+        <Link
+          to="/planner/availability"
+          className="calendar-selected__availability-link"
+        >
+          Fix availability
+        </Link>
+      </div>
     </div>
   )}
 </section>
