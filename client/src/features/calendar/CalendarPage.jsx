@@ -7,6 +7,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  CircleAlert,
 } from "lucide-react";
 
 import {
@@ -578,6 +579,166 @@ const toDateKey = (
   return `${year}-${month}-${day}`;
 };
 
+const DATE_KEY_PATTERN =
+  /^\d{4}-\d{2}-\d{2}$/;
+
+
+const isValidDateKey = (
+  value
+) => {
+  const normalized =
+    String(
+      value ?? ""
+    ).trim();
+
+
+  if (
+    !DATE_KEY_PATTERN.test(
+      normalized
+    )
+  ) {
+    return false;
+  }
+
+
+  const [
+    year,
+    month,
+    day,
+  ] =
+    normalized
+      .split("-")
+      .map(Number);
+
+
+  const date =
+    new Date(
+      year,
+      month - 1,
+      day
+    );
+
+
+  return (
+    date.getFullYear() ===
+      year &&
+    date.getMonth() ===
+      month - 1 &&
+    date.getDate() ===
+      day
+  );
+};
+
+const getLastDayOfMonth = (
+  date
+) =>
+  new Date(
+    date.getFullYear(),
+    date.getMonth() + 1,
+    0
+  ).getDate();
+
+
+const getClampedDateForMonth = (
+  sourceDate,
+  targetMonth
+) => {
+  const targetDay =
+    Math.min(
+      sourceDate.getDate(),
+      getLastDayOfMonth(
+        targetMonth
+      )
+    );
+
+
+  return new Date(
+    targetMonth.getFullYear(),
+    targetMonth.getMonth(),
+    targetDay
+  );
+};
+
+const getCalendarTaskNotice = ({
+  openTaskCount,
+  undatedCount,
+  invalidDeadlineCount,
+}) => {
+  if (
+    openTaskCount === 0
+  ) {
+    return {
+      title:
+        "No open tasks to place on the calendar",
+
+      message:
+        "Your Calendar can still show saved study availability. Open tasks will appear here when they have valid due dates.",
+    };
+  }
+
+
+  if (
+    undatedCount > 0 &&
+    invalidDeadlineCount > 0
+  ) {
+    return {
+      title:
+        "Some open tasks are not shown on calendar dates",
+
+      message:
+        `${undatedCount} ${
+          undatedCount === 1
+            ? "task has"
+            : "tasks have"
+        } no due date, and ${invalidDeadlineCount} ${
+          invalidDeadlineCount === 1
+            ? "task has"
+            : "tasks have"
+        } a deadline CozyCram cannot interpret safely.`,
+    };
+  }
+
+
+  if (
+    undatedCount > 0
+  ) {
+    return {
+      title:
+        "Some open tasks have no due date",
+
+      message:
+        `${undatedCount} open ${
+          undatedCount === 1
+            ? "task is"
+            : "tasks are"
+        } not placed on a calendar date because no due date is saved.`,
+    };
+  }
+
+
+  if (
+    invalidDeadlineCount > 0
+  ) {
+    return {
+      title:
+        "Some task deadlines need attention",
+
+      message:
+        `${invalidDeadlineCount} open ${
+          invalidDeadlineCount === 1
+            ? "task has"
+            : "tasks have"
+        } a deadline CozyCram cannot interpret safely, so ${
+          invalidDeadlineCount === 1
+            ? "it is"
+            : "they are"
+        } not placed on the calendar.`,
+    };
+  }
+
+
+  return null;
+};
 
 const formatMonthHeading = (
   date
@@ -731,6 +892,54 @@ function CalendarPage() {
         "todo"
     );
 
+    const undatedOpenTasks =
+  openTasks.filter(
+    (task) =>
+      !String(
+        task.dueDate ?? ""
+      ).trim()
+  );
+
+  const invalidDeadlineTasks =
+  openTasks.filter(
+    (task) => {
+      const dueDate =
+        String(
+          task.dueDate ?? ""
+        ).trim();
+
+
+      return (
+        Boolean(
+          dueDate
+        ) &&
+        !isValidDateKey(
+          dueDate
+        )
+      );
+    }
+  );
+
+  const calendarDatedTasks =
+  openTasks.filter(
+    (task) =>
+      isValidDateKey(
+        task.dueDate
+      )
+  );
+
+  const calendarTaskNotice =
+  getCalendarTaskNotice({
+    openTaskCount:
+      openTasks.length,
+
+    undatedCount:
+      undatedOpenTasks.length,
+
+    invalidDeadlineCount:
+      invalidDeadlineTasks.length,
+  });
+
    const taskSubjectMap =
   new Map(
     subjects.map(
@@ -745,18 +954,11 @@ function CalendarPage() {
   );
 
    const dueCountByDate =
-  openTasks.reduce(
+  calendarDatedTasks.reduce(
     (
       map,
       task
     ) => {
-      if (
-        !task.dueDate
-      ) {
-        return map;
-      }
-
-
       map.set(
         task.dueDate,
         (
@@ -773,7 +975,7 @@ function CalendarPage() {
   );
 
    const selectedDateTasks =
-  openTasks
+  calendarDatedTasks
     .filter(
       (task) =>
         task.dueDate ===
@@ -858,45 +1060,58 @@ function CalendarPage() {
   );
 
   const handlePreviousMonth =
-    () => {
-      const previousMonth =
-        new Date(
-          visibleMonth.getFullYear(),
-          visibleMonth.getMonth() - 1,
-          1
-        );
+  () => {
+    const previousMonth =
+      new Date(
+        visibleMonth.getFullYear(),
+        visibleMonth.getMonth() - 1,
+        1
+      );
 
 
-      setVisibleMonth(
+    const nextSelectedDate =
+      getClampedDateForMonth(
+        selectedDate,
         previousMonth
       );
 
 
-      setSelectedDate(
-        previousMonth
-      );
-    };
+    setVisibleMonth(
+      previousMonth
+    );
 
+
+    setSelectedDate(
+      nextSelectedDate
+    );
+  };
 
   const handleNextMonth =
-    () => {
-      const nextMonth =
-        new Date(
-          visibleMonth.getFullYear(),
-          visibleMonth.getMonth() + 1,
-          1
-        );
+  () => {
+    const nextMonth =
+      new Date(
+        visibleMonth.getFullYear(),
+        visibleMonth.getMonth() + 1,
+        1
+      );
 
 
-      setVisibleMonth(
+    const nextSelectedDate =
+      getClampedDateForMonth(
+        selectedDate,
         nextMonth
       );
 
 
-      setSelectedDate(
-        nextMonth
-      );
-    };
+    setVisibleMonth(
+      nextMonth
+    );
+
+
+    setSelectedDate(
+      nextSelectedDate
+    );
+  };
 
 
   const handleToday =
@@ -1057,6 +1272,43 @@ function CalendarPage() {
         </div>
       </header>
 
+       {calendarTaskNotice && (
+  <section
+    className="calendar-data-notice"
+    aria-labelledby="calendar-data-notice-title"
+  >
+    <CircleAlert
+      size={22}
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
+
+
+    <div>
+      <strong id="calendar-data-notice-title">
+        {
+          calendarTaskNotice
+            .title
+        }
+      </strong>
+
+      <p>
+        {
+          calendarTaskNotice
+            .message
+        }
+      </p>
+    </div>
+
+
+    <Link
+      to="/planner/tasks"
+      className="calendar-data-notice__link"
+    >
+      Review tasks
+    </Link>
+  </section>
+)}
 
       <section
         className="calendar-panel"

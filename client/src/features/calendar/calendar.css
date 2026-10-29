@@ -127,6 +127,124 @@
     var(--text-heading-sm);
 }
 
+/* =========================================================
+   CALENDAR DATA NOTICE
+   ========================================================= */
+
+.calendar-data-notice {
+  display: grid;
+
+  grid-template-columns:
+    auto
+    minmax(0, 1fr)
+    auto;
+
+  align-items: start;
+
+  gap:
+    var(--space-3);
+
+  padding:
+    var(--space-4);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+}
+
+
+.calendar-data-notice
+> svg {
+  flex: 0 0 auto;
+
+  margin-top: 1px;
+
+  color:
+    var(--color-brand);
+}
+
+
+.calendar-data-notice
+> div {
+  min-width: 0;
+}
+
+
+.calendar-data-notice
+strong {
+  display: block;
+
+  overflow-wrap:
+    anywhere;
+
+  color:
+    var(--color-text-primary);
+
+  font-size:
+    var(--text-body-sm);
+}
+
+
+.calendar-data-notice
+p {
+  max-width: 760px;
+
+  margin-top:
+    var(--space-1);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+
+  line-height: 1.55;
+}
+
+.calendar-data-notice__link {
+  min-height: 44px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding:
+    0
+    var(--space-3);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-body-sm);
+
+  font-weight:
+    var(--font-weight-semibold);
+
+  text-decoration: none;
+}
+
+
+.calendar-data-notice__link:hover {
+  border-color:
+    var(--color-brand);
+
+  background:
+    var(--color-surface-1);
+}
 
 /* =========================================================
    MAIN CALENDAR
@@ -249,7 +367,8 @@
 .calendar-day:focus-visible,
 .calendar-state__link:focus-visible,
 .calendar-selected__task-link:focus-visible,
-.calendar-selected__availability-link:focus-visible {
+.calendar-selected__availability-link:focus-visible
+.calendar-data-notice__link:focus-visible {
   outline:
     2px solid
     var(--color-brand);
@@ -1381,6 +1500,21 @@ span {
 .calendar-selected__availability-link {
   width: 100%;
 }
+
+.calendar-data-notice {
+  grid-template-columns:
+    auto
+    minmax(0, 1fr);
+}
+
+
+.calendar-data-notice__link {
+  grid-column:
+    1 / -1;
+
+  width: 100%;
+}
+
 }
 
 
@@ -1404,5 +1538,10 @@ span {
 .calendar-selected__context {
   flex-direction:
     column;
+}
+
+.calendar-data-notice {
+  grid-template-columns:
+    1fr;
 }
 }
