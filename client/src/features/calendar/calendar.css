@@ -91,6 +91,7 @@
 
 
 .calendar-header__summary article {
+    min-width: 0;
   display: flex;
   flex-direction: column;
 
@@ -251,6 +252,14 @@ p {
    ========================================================= */
 
 .calendar-panel {
+  min-width: 0;
+
+  overscroll-behavior-inline:
+  contain;
+
+  scrollbar-gutter:
+  stable;
+
   padding:
     var(--space-5);
 
@@ -308,6 +317,7 @@ p {
 .calendar-toolbar__controls {
   display: flex;
   align-items: center;
+  flex-wrap:wrap;
 
   gap:
     var(--space-2);
@@ -375,6 +385,12 @@ p {
 
   outline-offset:
     3px;
+}
+.calendar-day:focus-visible {
+  z-index: 2;
+
+  outline-offset:
+    -3px;
 }
 .calendar-selected__availability {
   margin-top:
@@ -495,7 +511,17 @@ strong {
   overflow-wrap:
     anywhere;
 }
-
+.calendar-selected__availability-card
+p,
+.calendar-selected__availability-empty
+p,
+.calendar-data-notice
+p,
+.calendar-selected__context
+p {
+  overflow-wrap:
+    anywhere;
+}
 
 .calendar-selected__availability-card
 p {
@@ -676,6 +702,9 @@ p {
 
   position: relative;
 
+  touch-action:
+  manipulation;
+
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -727,10 +756,13 @@ p {
 .calendar-day--outside {
   color:
     var(--color-text-muted);
-
-  opacity: 0.58;
 }
 
+.calendar-day--outside
+.calendar-day__number {
+  color:
+    var(--color-text-muted);
+}
 
 .calendar-day--selected {
   background:
@@ -774,6 +806,14 @@ p {
   padding:
     0
     var(--space-2);
+
+    border:
+  1px solid
+  color-mix(
+    in srgb,
+    var(--color-brand) 30%,
+    transparent
+  );
 
   border-radius:
     999px;
@@ -845,6 +885,14 @@ p {
     0
     var(--space-2);
 
+    border:
+  1px solid
+  color-mix(
+    in srgb,
+    var(--color-focus) 30%,
+    transparent
+  );
+
   border-radius:
     999px;
 
@@ -884,8 +932,26 @@ p {
       var(--color-surface-1)
     );
 
+    border:
+  1px solid
+  var(--color-border-subtle);
+
   color:
     var(--color-brand);
+}
+
+.calendar-day__today,
+.calendar-day__due,
+.calendar-day__availability {
+  max-width: 100%;
+
+  overflow: hidden;
+
+  text-overflow:
+    ellipsis;
+
+  white-space:
+    nowrap;
 }
 
 /* =========================================================
@@ -1214,6 +1280,11 @@ h3 {
 
 .calendar-selected__task-meta
 span {
+    max-width: 100%;
+
+overflow-wrap:
+  anywhere;
+
   display: inline-flex;
   align-items: center;
 
@@ -1408,6 +1479,7 @@ span {
 
 
   .calendar-header__summary {
+    min-width: 0;
     width: 100%;
   }
 
@@ -1458,13 +1530,17 @@ span {
 
 
   .calendar-panel {
-    overflow-x: auto;
-  }
+  overflow-x:
+    auto;
+
+  -webkit-overflow-scrolling:
+    touch;
+}
 
 
   .calendar-weekdays,
   .calendar-grid {
-    min-width: 700px;
+    min-width: 630px;
   }
 
 
@@ -1515,6 +1591,12 @@ span {
   width: 100%;
 }
 
+.calendar-data-notice,
+.calendar-selected__context,
+.calendar-selected__availability-card {
+  min-width: 0;
+}
+
 }
 
 
@@ -1544,4 +1626,61 @@ span {
   grid-template-columns:
     1fr;
 }
+
+.calendar-toolbar__controls {
+  display: grid;
+
+  grid-template-columns:
+    44px
+    minmax(0, 1fr)
+    44px;
+}
+
+.calendar-toolbar__today {
+  width: 100%;
+}
+}
+
+@media (
+  prefers-reduced-motion:
+  reduce
+) {
+  .calendar-page *,
+  .calendar-page *::before,
+  .calendar-page *::after {
+    scroll-behavior:
+      auto !important;
+
+    transition-duration:
+      0.01ms !important;
+
+    animation-duration:
+      0.01ms !important;
+
+    animation-iteration-count:
+      1 !important;
+  }
+}
+
+@media (
+  forced-colors:
+  active
+) {
+  .calendar-day--selected {
+    outline:
+      2px solid
+      Highlight;
+
+    outline-offset:
+      -2px;
+  }
+
+
+  .calendar-day__today,
+  .calendar-day__due,
+  .calendar-day__availability {
+    border:
+      1px solid
+      currentColor;
+  }
 }

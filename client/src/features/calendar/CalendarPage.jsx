@@ -1320,13 +1320,17 @@ function CalendarPage() {
               MONTH
             </p>
 
-            <h2 id="calendar-month-title">
-              {
-                formatMonthHeading(
-                  visibleMonth
-                )
-              }
-            </h2>
+            <h2
+  id="calendar-month-title"
+  aria-live="polite"
+  aria-atomic="true"
+>
+  {
+    formatMonthHeading(
+      visibleMonth
+    )
+  }
+</h2>
           </div>
 
 
@@ -1397,7 +1401,12 @@ function CalendarPage() {
         </div>
 
 
-        <div className="calendar-grid">
+        <div
+  className="calendar-grid"
+  aria-label={`Calendar dates for ${formatMonthHeading(
+    visibleMonth
+  )}`}
+>
           {calendarDays.map(
             (date) => {
               const dateKey =
@@ -1471,6 +1480,11 @@ const availabilityAriaText =
                   aria-pressed={
                     isSelected
                   }
+                  aria-current={
+  isToday
+    ? "date"
+    : undefined
+}
                  aria-label={`${formatSelectedDate(
   date
 )}${
@@ -1536,13 +1550,17 @@ const availabilityAriaText =
             SELECTED DAY
           </p>
 
-          <h2 id="calendar-selected-title">
-            {
-              formatSelectedDate(
-                selectedDate
-              )
-            }
-          </h2>
+          <h2
+  id="calendar-selected-title"
+  aria-live="polite"
+  aria-atomic="true"
+>
+  {
+    formatSelectedDate(
+      selectedDate
+    )
+  }
+</h2>
         </div>
 
 
@@ -1821,7 +1839,7 @@ const availabilityAriaText =
           to="/planner/availability"
           className="calendar-selected__availability-link"
         >
-          Edit availability
+          Set availability
         </Link>
       </div>
     </div>
