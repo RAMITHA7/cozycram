@@ -310,6 +310,184 @@ const formatDuration = (
   return `${remainingMinutes} min`;
 };
 
+const getAvailabilitySummaryValue = (
+  availabilityContext
+) => {
+  if (
+    availabilityContext.status ===
+    "available"
+  ) {
+    return formatDuration(
+      availabilityContext
+        .durationMinutes
+    );
+  }
+
+
+  if (
+    availabilityContext.status ===
+    "disabled"
+  ) {
+    return "Off";
+  }
+
+
+  if (
+    availabilityContext.status ===
+    "invalid"
+  ) {
+    return "Needs attention";
+  }
+
+
+  return "Not saved";
+};
+
+const getSelectedDayOverview = ({
+  taskCount,
+  taskMinutes,
+  availabilityContext,
+}) => {
+  const hasTasks =
+    taskCount > 0;
+
+
+  const hasAvailability =
+    availabilityContext.status ===
+    "available";
+
+
+  if (
+    hasTasks &&
+    hasAvailability
+  ) {
+    return {
+      title:
+        "Deadlines and study time on this day",
+
+      message:
+        `${taskCount} open ${
+          taskCount === 1
+            ? "task is"
+            : "tasks are"
+        } due on this date, representing ${formatDuration(
+          taskMinutes
+        )} of estimated work. You also have ${formatDuration(
+          availabilityContext
+            .durationMinutes
+        )} of saved study availability on this weekday. CozyCram has not assigned those tasks to this study window.`,
+    };
+  }
+
+
+  if (
+    hasTasks &&
+    availabilityContext.status ===
+      "disabled"
+  ) {
+    return {
+      title:
+        "Deadlines with study availability off",
+
+      message:
+        `${taskCount} open ${
+          taskCount === 1
+            ? "task is"
+            : "tasks are"
+        } due on this date, but study availability is currently disabled for this weekday.`,
+    };
+  }
+
+
+  if (
+    hasTasks &&
+    availabilityContext.status ===
+      "invalid"
+  ) {
+    return {
+      title:
+        "Deadlines with availability needing attention",
+
+      message:
+        `${taskCount} open ${
+          taskCount === 1
+            ? "task is"
+            : "tasks are"
+        } due on this date. The saved study availability for this weekday needs attention before CozyCram can treat it as usable time.`,
+    };
+  }
+
+
+  if (
+    hasTasks
+  ) {
+    return {
+      title:
+        "Deadlines without saved study availability",
+
+      message:
+        `${taskCount} open ${
+          taskCount === 1
+            ? "task is"
+            : "tasks are"
+        } due on this date, but no study availability is saved for this weekday.`,
+    };
+  }
+
+
+  if (
+    hasAvailability
+  ) {
+    return {
+      title:
+        "Study time available",
+
+      message:
+        `No open task deadlines are due on this date. You have ${formatDuration(
+          availabilityContext
+            .durationMinutes
+        )} of saved study availability on this weekday.`,
+    };
+  }
+
+
+  if (
+    availabilityContext.status ===
+      "invalid"
+  ) {
+    return {
+      title:
+        "Availability needs attention",
+
+      message:
+        "No open task deadlines are due on this date, and the saved study window for this weekday needs attention.",
+    };
+  }
+
+
+  if (
+    availabilityContext.status ===
+      "disabled"
+  ) {
+    return {
+      title:
+        "No deadlines or active study window",
+
+      message:
+        "No open task deadlines are due on this date, and study availability is turned off for this weekday.",
+    };
+  }
+
+
+  return {
+    title:
+      "No deadlines or saved study window",
+
+    message:
+      "No open task deadlines are due on this date, and CozyCram has no study availability saved for this weekday.",
+  };
+};
+
 const startOfDay = (
   date
 ) =>
@@ -662,6 +840,22 @@ function CalendarPage() {
 
   const selectedAvailabilityDay =
   selectedAvailability.day;
+
+  const selectedDayOverview =
+  getSelectedDayOverview({
+    taskCount:
+      selectedDateTasks.length,
+
+    taskMinutes:
+      selectedDateTaskMinutes,
+
+    availabilityContext:
+      selectedAvailability,
+  });
+  const selectedAvailabilitySummary =
+  getAvailabilitySummaryValue(
+    selectedAvailability
+  );
 
   const handlePreviousMonth =
     () => {
@@ -1128,7 +1322,46 @@ const availabilityAriaText =
       }
     </strong>
   </article>
+  <article>
+  <span>
+    Saved availability
+  </span>
+
+  <strong>
+    {
+      selectedAvailabilitySummary
+    }
+  </strong>
+</article>
 </div>
+  <div
+  className="calendar-selected__context"
+  aria-live="polite"
+>
+  <CalendarDays
+    size={22}
+    strokeWidth={1.8}
+    aria-hidden="true"
+  />
+
+
+  <div>
+    <strong>
+      {
+        selectedDayOverview
+          .title
+      }
+    </strong>
+
+    <p>
+      {
+        selectedDayOverview
+          .message
+      }
+    </p>
+  </div>
+</div>
+
 <section
   className="calendar-selected__tasks"
   aria-labelledby="calendar-selected-tasks-title"
