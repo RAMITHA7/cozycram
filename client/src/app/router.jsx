@@ -22,6 +22,7 @@ import TasksPage from "../features/tasks/TasksPage.jsx";
 import TaskDetailPage from "../features/tasks/TaskDetailPage.jsx";
 import PlannerPage from "../features/planner/PlannerPage.jsx";
 import AvailabilityPage from "../features/planner/AvailabilityPage.jsx";
+import CalendarPage from "../features/calendar/CalendarPage.jsx";
 
 import RoutePlaceholder from "./RoutePlaceholder.jsx";
 import LandingPage from "../features/landing/LandingPage.jsx";
@@ -124,12 +125,7 @@ const router = createBrowserRouter([
 
       {
         path: "/calendar",
-        element: (
-          <RoutePlaceholder
-            eyebrow="CALENDAR"
-            title="Calendar"
-          />
-        ),
+        element: <CalendarPage />
       },
 
       {
