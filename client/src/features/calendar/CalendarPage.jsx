@@ -30,6 +30,99 @@ const WEEKDAY_LABELS = [
   "Sun",
 ];
 
+const PRIORITY_WEIGHT = {
+  high: 3,
+  medium: 2,
+  low: 1,
+};
+
+const formatPriority = (
+  value
+) => {
+  const priority =
+    String(
+      value ?? ""
+    )
+      .trim()
+      .toLowerCase();
+
+
+  if (
+    priority === "high"
+  ) {
+    return "High priority";
+  }
+
+
+  if (
+    priority === "medium"
+  ) {
+    return "Medium priority";
+  }
+
+
+  if (
+    priority === "low"
+  ) {
+    return "Low priority";
+  }
+
+
+  return "Priority not set";
+};
+
+const formatDuration = (
+  value
+) => {
+  const minutes =
+    Number(
+      value
+    );
+
+
+  if (
+    !Number.isFinite(
+      minutes
+    ) ||
+    minutes <= 0
+  ) {
+    return "0 min";
+  }
+
+
+  const wholeMinutes =
+    Math.floor(
+      minutes
+    );
+
+
+  const hours =
+    Math.floor(
+      wholeMinutes / 60
+    );
+
+
+  const remainingMinutes =
+    wholeMinutes % 60;
+
+
+  if (
+    hours > 0 &&
+    remainingMinutes > 0
+  ) {
+    return `${hours}h ${remainingMinutes}m`;
+  }
+
+
+  if (
+    hours > 0
+  ) {
+    return `${hours}h`;
+  }
+
+
+  return `${remainingMinutes} min`;
+};
 
 const startOfDay = (
   date
@@ -268,6 +361,106 @@ function CalendarPage() {
         "todo"
     );
 
+   const taskSubjectMap =
+  new Map(
+    subjects.map(
+      (subject) => [
+        String(
+          subject.id
+        ),
+
+        subject.name,
+      ]
+    )
+  );
+
+   const dueCountByDate =
+  openTasks.reduce(
+    (
+      map,
+      task
+    ) => {
+      if (
+        !task.dueDate
+      ) {
+        return map;
+      }
+
+
+      map.set(
+        task.dueDate,
+        (
+          map.get(
+            task.dueDate
+          ) || 0
+        ) + 1
+      );
+
+
+      return map;
+    },
+    new Map()
+  );
+
+   const selectedDateTasks =
+  openTasks
+    .filter(
+      (task) =>
+        task.dueDate ===
+        selectedDateKey
+    )
+    .sort(
+      (
+        first,
+        second
+      ) => {
+        const firstPriority =
+          PRIORITY_WEIGHT[
+            first.priority
+          ] || 0;
+
+
+        const secondPriority =
+          PRIORITY_WEIGHT[
+            second.priority
+          ] || 0;
+
+
+        if (
+          secondPriority !==
+          firstPriority
+        ) {
+          return (
+            secondPriority -
+            firstPriority
+          );
+        }
+
+
+        return String(
+          first.title ?? ""
+        ).localeCompare(
+          String(
+            second.title ?? ""
+          )
+        );
+      }
+    );
+
+    const selectedDateTaskMinutes =
+  selectedDateTasks.reduce(
+    (
+      total,
+      task
+    ) =>
+      total +
+      (
+        Number(
+          task.estimatedMinutes
+        ) || 0
+      ),
+    0
+  );
 
   const handlePreviousMonth =
     () => {
@@ -582,6 +775,10 @@ function CalendarPage() {
                 date.getFullYear() ===
                   visibleMonth.getFullYear();
 
+                const dueCount =
+  dueCountByDate.get(
+    dateKey
+  ) || 0;
 
               return (
                 <button
@@ -607,11 +804,17 @@ function CalendarPage() {
                   aria-pressed={
                     isSelected
                   }
-                  aria-label={
-                    formatSelectedDate(
-                      date
-                    )
-                  }
+                  aria-label={`${formatSelectedDate(
+  date
+)}${
+  dueCount > 0
+    ? `, ${dueCount} open ${
+        dueCount === 1
+          ? "task"
+          : "tasks"
+      } due`
+    : ", no open tasks due"
+}`}
                 >
                   <span className="calendar-day__number">
                     {
@@ -625,6 +828,16 @@ function CalendarPage() {
                       Today
                     </span>
                   )}
+                  {dueCount > 0 && (
+  <span
+    className="calendar-day__due"
+    aria-hidden="true"
+  >
+    {dueCount === 1
+      ? "1 due"
+      : `${dueCount} due`}
+  </span>
+)}
                 </button>
               );
             }
@@ -652,26 +865,151 @@ function CalendarPage() {
         </div>
 
 
-        <div className="calendar-selected__foundation">
-          <CalendarDays
-            size={22}
-            strokeWidth={1.8}
-            aria-hidden="true"
-          />
+        <div className="calendar-selected__summary">
+  <article>
+    <span>
+      Due tasks
+    </span>
 
-          <div>
-            <strong>
-              Calendar date selected
-            </strong>
+    <strong>
+      {
+        selectedDateTasks
+          .length
+      }
+    </strong>
+  </article>
 
-            <p>
-              Deadline, task and study
-              availability context will
-              be connected in the next
-              Day 13 stages.
-            </p>
-          </div>
-        </div>
+
+  <article>
+    <span>
+      Due-work estimate
+    </span>
+
+    <strong>
+      {
+        formatDuration(
+          selectedDateTaskMinutes
+        )
+      }
+    </strong>
+  </article>
+</div>
+<section
+  className="calendar-selected__tasks"
+  aria-labelledby="calendar-selected-tasks-title"
+>
+  <div className="calendar-selected__tasks-heading">
+    <div>
+      <p>
+        TASK DEADLINES
+      </p>
+
+      <h3 id="calendar-selected-tasks-title">
+        Open work due this day
+      </h3>
+    </div>
+
+
+    {selectedDateTasks.length > 0 && (
+      <span>
+        {
+          selectedDateTasks
+            .length
+        }
+      </span>
+    )}
+  </div>
+
+
+  {selectedDateTasks.length === 0 ? (
+    <div className="calendar-selected__empty">
+      <CalendarDays
+        size={22}
+        strokeWidth={1.8}
+        aria-hidden="true"
+      />
+
+      <div>
+        <strong>
+          No open task deadlines
+          on this day.
+        </strong>
+
+        <p>
+          Tasks without this due
+          date remain available in
+          your task list.
+        </p>
+
+        <Link
+          to="/planner/tasks"
+          className="calendar-selected__task-link"
+        >
+          View all tasks
+        </Link>
+      </div>
+    </div>
+  ) : (
+    <div className="calendar-selected__task-list">
+      {selectedDateTasks.map(
+        (task) => {
+          const subjectName =
+            taskSubjectMap.get(
+              String(
+                task.subjectId
+              )
+            ) ||
+            "Unknown subject";
+
+
+          return (
+            <article
+              key={task.id}
+              className="calendar-selected__task"
+            >
+              <div className="calendar-selected__task-main">
+                <strong>
+                  {task.title}
+                </strong>
+
+
+                <div className="calendar-selected__task-meta">
+                  <span>
+                    {subjectName}
+                  </span>
+
+                  <span>
+                    {
+                      formatDuration(
+                        task.estimatedMinutes
+                      )
+                    }
+                  </span>
+
+                  <span>
+                    {
+                      formatPriority(
+                        task.priority
+                      )
+                    }
+                  </span>
+                </div>
+              </div>
+
+
+              <Link
+                to={`/planner/tasks/${task.id}`}
+                className="calendar-selected__task-link"
+              >
+                View task
+              </Link>
+            </article>
+          );
+        }
+      )}
+    </div>
+  )}
+</section>
       </section>
     </main>
   );
