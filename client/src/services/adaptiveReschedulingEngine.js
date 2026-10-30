@@ -1,7 +1,16 @@
 import {
+  createCandidateStudyWindows,
+  createCandidateWindow,
+  createScheduleSummary,
   createTaskSchedulingExplanation,
+  createUnscheduledWork,
+  MIN_SCHEDULE_BLOCK_MINUTES,
+  placeRankedTasksIntoWindows,
+  rankTasksForScheduling,
+  resolveFocusPlan,
   SCHEDULE_VERSION,
   scoreTaskForScheduling,
+  validateScheduleAccounting,
 } from "./schedulingEngine.js";
 
 export const ADAPTIVE_RESCHEDULE_VERSION =
@@ -218,6 +227,1072 @@ const timeToMinutes = (
     hours * 60 +
     minutes
   );
+};
+
+const minutesToTime = (
+  value
+) => {
+  const totalMinutes =
+    Math.floor(
+      Number(
+        value
+      )
+    );
+
+
+  if (
+    !Number.isFinite(
+      totalMinutes
+    ) ||
+    totalMinutes < 0 ||
+    totalMinutes > 1439
+  ) {
+    return null;
+  }
+
+
+  const hours =
+    Math.floor(
+      totalMinutes / 60
+    );
+
+
+  const minutes =
+    totalMinutes % 60;
+
+
+  return `${String(
+    hours
+  ).padStart(
+    2,
+    "0"
+  )}:${String(
+    minutes
+  ).padStart(
+    2,
+    "0"
+  )}`;
+};
+
+const getAsOfLocalContext = (
+  asOfDateTime
+) => {
+  if (
+    !isValidIsoDateTime(
+      asOfDateTime
+    )
+  ) {
+    return null;
+  }
+
+
+  const normalized =
+    String(
+      asOfDateTime
+    ).trim();
+
+
+  const match =
+    normalized.match(
+      /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{3}))?)?(?:Z|[+-]\d{2}:\d{2})$/
+    );
+
+
+  if (
+    !match
+  ) {
+    return null;
+  }
+
+
+  const dateKey =
+    match[1];
+
+
+  if (
+    !isValidDateKey(
+      dateKey
+    )
+  ) {
+    return null;
+  }
+
+
+  const hours =
+    Number(
+      match[2]
+    );
+
+
+  const minutes =
+    Number(
+      match[3]
+    );
+
+
+  const seconds =
+    Number(
+      match[4] || 0
+    );
+
+
+  const milliseconds =
+    Number(
+      match[5] || 0
+    );
+
+
+  let minuteOfDay =
+    hours * 60 +
+    minutes;
+
+
+  if (
+    seconds > 0 ||
+    milliseconds > 0
+  ) {
+    minuteOfDay += 1;
+  }
+
+
+  return {
+    dateKey,
+
+    minuteOfDay:
+      Math.min(
+        1440,
+        minuteOfDay
+      ),
+  };
+};
+
+const mergeMinuteIntervals = (
+  intervals
+) => {
+  const sorted =
+    (
+      Array.isArray(
+        intervals
+      )
+        ? intervals
+        : []
+    )
+      .filter(
+        (interval) =>
+          Number.isFinite(
+            interval?.start
+          ) &&
+          Number.isFinite(
+            interval?.end
+          ) &&
+          interval.end >
+            interval.start
+      )
+      .map(
+        (interval) => ({
+          start:
+            interval.start,
+
+          end:
+            interval.end,
+        })
+      )
+      .sort(
+        (
+          first,
+          second
+        ) =>
+          first.start -
+          second.start
+      );
+
+
+  const merged = [];
+
+
+  for (
+    const interval
+    of sorted
+  ) {
+    const previous =
+      merged[
+        merged.length - 1
+      ];
+
+
+    if (
+      !previous ||
+      interval.start >
+        previous.end
+    ) {
+      merged.push({
+        ...interval,
+      });
+
+      continue;
+    }
+
+
+    previous.end =
+      Math.max(
+        previous.end,
+        interval.end
+      );
+  }
+
+
+  return merged;
+};
+
+const createReplacementSchedulingSnapshot = ({
+  snapshot,
+  remainingWork,
+}) => {
+  const subjects =
+    Array.isArray(
+      snapshot
+        ?.studyData
+        ?.subjects
+    )
+      ? snapshot
+          .studyData
+          .subjects
+      : [];
+
+
+  const availability =
+    Array.isArray(
+      snapshot
+        ?.studyData
+        ?.availability
+    )
+      ? snapshot
+          .studyData
+          .availability
+      : [];
+
+
+  const preferences =
+    snapshot
+      ?.studyData
+      ?.preferences &&
+    typeof snapshot
+      .studyData
+      .preferences ===
+      "object"
+      ? snapshot
+          .studyData
+          .preferences
+      : {};
+
+
+  const subjectIds =
+    new Set(
+      subjects.map(
+        (subject) =>
+          String(
+            subject.id
+          )
+      )
+    );
+
+
+  const taskIds =
+    new Set();
+
+
+  const tasks = [];
+
+
+  for (
+    const workItem
+    of remainingWork.tasks
+  ) {
+    const readyMinutes =
+      Number(
+        workItem
+          .readyToRescheduleMinutes
+      );
+
+
+    if (
+      readyMinutes <= 0
+    ) {
+      continue;
+    }
+
+
+    if (
+      !Number.isInteger(
+        readyMinutes
+      )
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "Adaptive replacement work contains an invalid minute value.",
+
+        snapshot: null,
+      };
+    }
+
+
+    const task =
+      workItem.task;
+
+
+    if (
+      !task ||
+      task.status !==
+        "todo"
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "Adaptive replacement work must belong to a current open task.",
+
+        snapshot: null,
+      };
+    }
+
+
+    const taskId =
+      String(
+        task.id
+      );
+
+
+    if (
+      taskIds.has(
+        taskId
+      )
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "Adaptive replacement work contains a duplicate task.",
+
+        snapshot: null,
+      };
+    }
+
+
+    taskIds.add(
+      taskId
+    );
+
+
+    if (
+      !subjectIds.has(
+        String(
+          task.subjectId
+        )
+      )
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "Adaptive replacement work references a subject that does not exist.",
+
+        snapshot: null,
+      };
+    }
+
+
+    tasks.push({
+      ...cloneValue(
+        task
+      ),
+
+      estimatedMinutes:
+        readyMinutes,
+    });
+  }
+
+
+  return {
+    valid: true,
+
+    error: "",
+
+    snapshot: {
+      version:
+        SCHEDULE_VERSION,
+
+      weekStart:
+        snapshot.weekStart,
+
+      weekEnd:
+        snapshot.weekEnd,
+
+      subjects:
+        cloneValue(
+          subjects
+        ),
+
+      tasks,
+
+      availability:
+        cloneValue(
+          availability
+        ),
+
+      preferences:
+        cloneValue(
+          preferences
+        ),
+    },
+  };
+};
+
+const createAdaptiveFreeWindows = ({
+  baseWindows,
+  keptBlocks,
+  asOfDateTime,
+  breakMinutes,
+}) => {
+  const asOfContext =
+    getAsOfLocalContext(
+      asOfDateTime
+    );
+
+
+  if (
+    !asOfContext
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Adaptive replacement scheduling could not interpret the review time.",
+
+      windows: [],
+    };
+  }
+
+
+  const windows = [];
+
+
+  const appendWindow = ({
+    baseWindow,
+    startMinutes,
+    endMinutes,
+  }) => {
+    if (
+      endMinutes -
+        startMinutes <
+      MIN_SCHEDULE_BLOCK_MINUTES
+    ) {
+      return;
+    }
+
+
+    const startTime =
+      minutesToTime(
+        startMinutes
+      );
+
+
+    const endTime =
+      minutesToTime(
+        endMinutes
+      );
+
+
+    if (
+      !startTime ||
+      !endTime
+    ) {
+      return;
+    }
+
+
+    windows.push(
+      createCandidateWindow({
+        date:
+          baseWindow.date,
+
+        weekday:
+          baseWindow.weekday,
+
+        startTime,
+
+        endTime,
+
+        startMinutes,
+
+        endMinutes,
+
+        durationMinutes:
+          endMinutes -
+          startMinutes,
+      })
+    );
+  };
+
+
+  for (
+    const baseWindow
+    of baseWindows
+  ) {
+    if (
+      baseWindow.date <
+      asOfContext.dateKey
+    ) {
+      continue;
+    }
+
+
+    let usableStart =
+      Number(
+        baseWindow
+          .startMinutes
+      );
+
+
+    const usableEnd =
+      Number(
+        baseWindow
+          .endMinutes
+      );
+
+
+    if (
+      baseWindow.date ===
+      asOfContext.dateKey
+    ) {
+      usableStart =
+        Math.max(
+          usableStart,
+          asOfContext
+            .minuteOfDay
+        );
+    }
+
+
+    if (
+      usableEnd -
+        usableStart <
+      MIN_SCHEDULE_BLOCK_MINUTES
+    ) {
+      continue;
+    }
+
+
+    const protectedIntervals =
+      keptBlocks
+        .filter(
+          (block) =>
+            block.date ===
+            baseWindow.date
+        )
+        .map(
+          (block) => {
+            const blockStart =
+              timeToMinutes(
+                block.startTime
+              );
+
+
+            const blockEnd =
+              timeToMinutes(
+                block.endTime
+              );
+
+
+            if (
+              blockStart ===
+                null ||
+              blockEnd ===
+                null
+            ) {
+              return null;
+            }
+
+
+            return {
+              start:
+                Math.max(
+                  usableStart,
+                  blockStart -
+                    breakMinutes
+                ),
+
+              end:
+                Math.min(
+                  usableEnd,
+                  blockEnd +
+                    breakMinutes
+                ),
+            };
+          }
+        )
+        .filter(
+          Boolean
+        );
+
+
+    const mergedProtectedIntervals =
+      mergeMinuteIntervals(
+        protectedIntervals
+      );
+
+
+    let cursor =
+      usableStart;
+
+
+    for (
+      const protectedInterval
+      of mergedProtectedIntervals
+    ) {
+      if (
+        protectedInterval.start >
+        cursor
+      ) {
+        appendWindow({
+          baseWindow,
+
+          startMinutes:
+            cursor,
+
+          endMinutes:
+            protectedInterval
+              .start,
+        });
+      }
+
+
+      cursor =
+        Math.max(
+          cursor,
+          protectedInterval.end
+        );
+    }
+
+
+    if (
+      usableEnd >
+      cursor
+    ) {
+      appendWindow({
+        baseWindow,
+
+        startMinutes:
+          cursor,
+
+        endMinutes:
+          usableEnd,
+      });
+    }
+  }
+
+
+  return {
+    valid: true,
+
+    error: "",
+
+    windows,
+  };
+};
+
+const validateAdaptiveReplacementInputs = ({
+  snapshot,
+  analysis,
+  remainingWork,
+  trigger,
+}) => {
+  const analysisValidation =
+    validateRemainingWorkAnalysis({
+      snapshot,
+      analysis,
+    });
+
+
+  if (
+    !analysisValidation.valid
+  ) {
+    return (
+      analysisValidation
+    );
+  }
+
+
+  if (
+    !remainingWork ||
+    typeof remainingWork !==
+      "object" ||
+    remainingWork.version !==
+      ADAPTIVE_RESCHEDULE_VERSION
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Adaptive replacement scheduling requires valid remaining-work analysis.",
+    };
+  }
+
+
+  if (
+    remainingWork
+      .scheduleVersion !==
+        snapshot
+          .scheduleVersion ||
+    remainingWork.weekStart !==
+      snapshot.weekStart ||
+    remainingWork.weekEnd !==
+      snapshot.weekEnd ||
+    remainingWork
+      .asOfDateTime !==
+        snapshot
+          .asOfDateTime
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Adaptive remaining work does not belong to the supplied adaptive snapshot.",
+    };
+  }
+
+
+  if (
+    !Array.isArray(
+      remainingWork.tasks
+    )
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Adaptive remaining work is missing its task accounting.",
+    };
+  }
+
+
+  if (
+    !isValidRescheduleTrigger(
+      trigger
+    )
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Adaptive replacement scheduling requires a valid explicit trigger.",
+    };
+  }
+
+
+  const readyMinutes =
+    remainingWork.tasks.reduce(
+      (
+        total,
+        item
+      ) =>
+        total +
+        (
+          Number(
+            item
+              .readyToRescheduleMinutes
+          ) || 0
+        ),
+      0
+    );
+
+
+  if (
+    readyMinutes !==
+    Number(
+      remainingWork
+        ?.summary
+        ?.readyToRescheduleMinutes
+    )
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Adaptive replacement scheduling received inconsistent remaining-work accounting.",
+    };
+  }
+
+
+  return {
+    valid: true,
+
+    error: "",
+  };
+};
+
+const doScheduleBlocksOverlap = (
+  first,
+  second
+) => {
+  if (
+    first.date !==
+    second.date
+  ) {
+    return false;
+  }
+
+
+  const firstStart =
+    timeToMinutes(
+      first.startTime
+    );
+
+
+  const firstEnd =
+    timeToMinutes(
+      first.endTime
+    );
+
+
+  const secondStart =
+    timeToMinutes(
+      second.startTime
+    );
+
+
+  const secondEnd =
+    timeToMinutes(
+      second.endTime
+    );
+
+
+  if (
+    firstStart === null ||
+    firstEnd === null ||
+    secondStart === null ||
+    secondEnd === null
+  ) {
+    return true;
+  }
+
+
+  return (
+    firstStart <
+      secondEnd &&
+    secondStart <
+      firstEnd
+  );
+};
+
+const validateReplacementBlockSafety = ({
+  keptBlocks,
+  replacementBlocks,
+  asOfDateTime,
+  breakMinutes,
+}) => {
+  const asOfTimestamp =
+    Date.parse(
+      asOfDateTime
+    );
+
+
+  if (
+    Number.isNaN(
+      asOfTimestamp
+    )
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Adaptive replacement scheduling could not validate the review time.",
+    };
+  }
+
+
+  for (
+    const block
+    of replacementBlocks
+  ) {
+    const validation =
+      validateOriginalScheduleBlock(
+        block
+      );
+
+
+    if (
+      !validation.valid
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "Adaptive replacement scheduling produced an invalid study block.",
+      };
+    }
+
+
+    const startTimestamp =
+      getScheduleBlockTimestamp({
+        block,
+
+        time:
+          block.startTime,
+
+        asOfDateTime,
+      });
+
+
+    if (
+      startTimestamp ===
+        null ||
+      startTimestamp <
+        asOfTimestamp
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "Adaptive replacement scheduling attempted to place work before the review time.",
+      };
+    }
+  }
+
+
+  for (
+    let firstIndex = 0;
+    firstIndex <
+      replacementBlocks.length;
+    firstIndex += 1
+  ) {
+    for (
+      let secondIndex =
+        firstIndex + 1;
+      secondIndex <
+        replacementBlocks.length;
+      secondIndex += 1
+    ) {
+      if (
+        doScheduleBlocksOverlap(
+          replacementBlocks[
+            firstIndex
+          ],
+          replacementBlocks[
+            secondIndex
+          ]
+        )
+      ) {
+        return {
+          valid: false,
+
+          error:
+            "Adaptive replacement blocks overlap one another.",
+        };
+      }
+    }
+  }
+
+
+  for (
+    const replacementBlock
+    of replacementBlocks
+  ) {
+    for (
+      const keptBlock
+      of keptBlocks
+    ) {
+      if (
+        replacementBlock.date !==
+        keptBlock.date
+      ) {
+        continue;
+      }
+
+
+      if (
+        doScheduleBlocksOverlap(
+          replacementBlock,
+          keptBlock
+        )
+      ) {
+        return {
+          valid: false,
+
+          error:
+            "Adaptive replacement work overlaps a preserved future study block.",
+        };
+      }
+
+
+      const replacementStart =
+        timeToMinutes(
+          replacementBlock
+            .startTime
+        );
+
+
+      const replacementEnd =
+        timeToMinutes(
+          replacementBlock
+            .endTime
+        );
+
+
+      const keptStart =
+        timeToMinutes(
+          keptBlock
+            .startTime
+        );
+
+
+      const keptEnd =
+        timeToMinutes(
+          keptBlock
+            .endTime
+        );
+
+
+      if (
+        replacementEnd <=
+          keptStart &&
+        keptStart -
+          replacementEnd <
+          breakMinutes
+      ) {
+        return {
+          valid: false,
+
+          error:
+            "Adaptive replacement scheduling did not preserve the required break before an existing future block.",
+        };
+      }
+
+
+      if (
+        keptEnd <=
+          replacementStart &&
+        replacementStart -
+          keptEnd <
+          breakMinutes
+      ) {
+        return {
+          valid: false,
+
+          error:
+            "Adaptive replacement scheduling did not preserve the required break after an existing future block.",
+        };
+      }
+    }
+  }
+
+
+  return {
+    valid: true,
+
+    error: "",
+  };
 };
 
 const getWeekdayKeyFromDateKey = (
@@ -2565,6 +3640,15 @@ const validateScheduleResult = (
   };
 };
 
+const isValidRescheduleTrigger = (
+  value
+) =>
+  Object.values(
+    RESCHEDULE_TRIGGER
+  ).includes(
+    value
+  );
+
 const normalizeCompletedBlockIds = ({
   completedBlockIds,
   blocks,
@@ -2907,3 +3991,517 @@ export const createEmptyAdaptiveReschedulingResult = (
     replacementBlocks: 0,
   },
 });
+export const generateAdaptiveReplacementSchedule = ({
+  snapshot,
+  analysis,
+  remainingWork,
+  trigger,
+}) => {
+  const inputValidation =
+    validateAdaptiveReplacementInputs({
+      snapshot,
+      analysis,
+      remainingWork,
+      trigger,
+    });
+
+
+  if (
+    !inputValidation.valid
+  ) {
+    return {
+      valid: false,
+
+      error:
+        inputValidation.error,
+
+      result: null,
+    };
+  }
+
+
+  const keptBlocks =
+    getBlocksWithAdaptiveState({
+      blocks:
+        analysis.blocks,
+
+      state:
+        RESCHEDULE_BLOCK_STATE
+          .FUTURE_PLANNED,
+    });
+
+
+  const completedBlocks =
+    getBlocksWithAdaptiveState({
+      blocks:
+        analysis.blocks,
+
+      state:
+        RESCHEDULE_BLOCK_STATE
+          .CONFIRMED_COMPLETE,
+    });
+
+
+  const elapsedUnconfirmedBlocks =
+    getBlocksWithAdaptiveState({
+      blocks:
+        analysis.blocks,
+
+      state:
+        RESCHEDULE_BLOCK_STATE
+          .ELAPSED_UNCONFIRMED,
+    });
+
+
+  const removedBlocks =
+    getBlocksWithAdaptiveState({
+      blocks:
+        analysis.blocks,
+
+      state:
+        RESCHEDULE_BLOCK_STATE
+          .INVALIDATED,
+    });
+
+
+  const schedulingSnapshotResult =
+    createReplacementSchedulingSnapshot({
+      snapshot,
+      remainingWork,
+    });
+
+
+  if (
+    !schedulingSnapshotResult
+      .valid
+  ) {
+    return {
+      valid: false,
+
+      error:
+        schedulingSnapshotResult
+          .error,
+
+      result: null,
+    };
+  }
+
+
+  const schedulingSnapshot =
+    schedulingSnapshotResult
+      .snapshot;
+
+
+  const focusResult =
+    resolveFocusPlan(
+      schedulingSnapshot
+        .preferences
+    );
+
+
+  if (
+    !focusResult.valid
+  ) {
+    return {
+      valid: false,
+
+      error:
+        focusResult.error,
+
+      result: null,
+    };
+  }
+
+
+  const baseWindowResult =
+    createCandidateStudyWindows(
+      schedulingSnapshot
+    );
+
+
+  if (
+    !baseWindowResult.valid
+  ) {
+    return {
+      valid: false,
+
+      error:
+        baseWindowResult.error,
+
+      result: null,
+    };
+  }
+
+
+  const freeWindowResult =
+    createAdaptiveFreeWindows({
+      baseWindows:
+        baseWindowResult
+          .windows,
+
+      keptBlocks,
+
+      asOfDateTime:
+        snapshot
+          .asOfDateTime,
+
+      breakMinutes:
+        focusResult
+          .focusPlan
+          .breakMinutes,
+    });
+
+
+  if (
+    !freeWindowResult.valid
+  ) {
+    return {
+      valid: false,
+
+      error:
+        freeWindowResult.error,
+
+      result: null,
+    };
+  }
+
+
+  const rankingResult =
+    rankTasksForScheduling(
+      schedulingSnapshot
+    );
+
+
+  if (
+    !rankingResult.valid
+  ) {
+    return {
+      valid: false,
+
+      error:
+        rankingResult.error,
+
+      result: null,
+    };
+  }
+
+
+  const placementResult =
+    placeRankedTasksIntoWindows({
+      rankedTasks:
+        rankingResult
+          .rankedTasks,
+
+      windows:
+        freeWindowResult
+          .windows,
+
+      preferences:
+        schedulingSnapshot
+          .preferences,
+
+      weekStart:
+        schedulingSnapshot
+          .weekStart,
+    });
+
+
+  if (
+    !placementResult.valid
+  ) {
+    return {
+      valid: false,
+
+      error:
+        placementResult.error,
+
+      result: null,
+    };
+  }
+
+
+  const unscheduled =
+    createUnscheduledWork({
+      snapshot:
+        schedulingSnapshot,
+
+      taskProgress:
+        placementResult
+          .taskProgress,
+
+      windows:
+        freeWindowResult
+          .windows,
+    });
+
+
+  const accounting =
+    validateScheduleAccounting({
+      tasks:
+        schedulingSnapshot
+          .tasks,
+
+      blocks:
+        placementResult
+          .blocks,
+
+      unscheduled,
+    });
+
+
+  if (
+    !accounting.valid
+  ) {
+    return {
+      valid: false,
+
+      error:
+        accounting.error,
+
+      result: null,
+    };
+  }
+
+
+  const replacementBlocks =
+    placementResult
+      .blocks;
+
+
+  const safetyValidation =
+    validateReplacementBlockSafety({
+      keptBlocks,
+
+      replacementBlocks,
+
+      asOfDateTime:
+        snapshot
+          .asOfDateTime,
+
+      breakMinutes:
+        focusResult
+          .focusPlan
+          .breakMinutes,
+    });
+
+
+  if (
+    !safetyValidation.valid
+  ) {
+    return {
+      valid: false,
+
+      error:
+        safetyValidation
+          .error,
+
+      result: null,
+    };
+  }
+
+
+  const replacementSummary =
+    createScheduleSummary({
+      tasks:
+        schedulingSnapshot
+          .tasks,
+
+      blocks:
+        replacementBlocks,
+
+      unscheduled,
+    });
+
+
+  const replacementScheduledMinutes =
+    replacementBlocks.reduce(
+      (
+        total,
+        block
+      ) =>
+        total +
+        Number(
+          block.durationMinutes
+        ),
+      0
+    );
+
+
+  const replacementUnscheduledMinutes =
+    unscheduled.reduce(
+      (
+        total,
+        item
+      ) =>
+        total +
+        Number(
+          item.remainingMinutes
+        ),
+      0
+    );
+
+
+  const readyToRescheduleMinutes =
+    Number(
+      remainingWork
+        .summary
+        .readyToRescheduleMinutes
+    );
+
+
+  if (
+    replacementScheduledMinutes +
+      replacementUnscheduledMinutes !==
+    readyToRescheduleMinutes
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Adaptive replacement schedule accounting failed because some ready work was lost or counted twice.",
+
+      result: null,
+    };
+  }
+
+
+  const changed =
+    removedBlocks.length >
+      0 ||
+    replacementBlocks.length >
+      0 ||
+    unscheduled.length >
+      0;
+
+
+  let status =
+    ADAPTIVE_RESCHEDULE_STATUS
+      .UNCHANGED;
+
+
+  if (
+    remainingWork
+      .requiresReview
+  ) {
+    status =
+      ADAPTIVE_RESCHEDULE_STATUS
+        .NEEDS_REVIEW;
+  } else if (
+    readyToRescheduleMinutes >
+      0 &&
+    replacementBlocks.length ===
+      0
+  ) {
+    status =
+      ADAPTIVE_RESCHEDULE_STATUS
+        .BLOCKED;
+  } else if (
+    changed
+  ) {
+    status =
+      ADAPTIVE_RESCHEDULE_STATUS
+        .ADJUSTED;
+  }
+
+
+  const emptyResult =
+    createEmptyAdaptiveReschedulingResult(
+      snapshot
+    );
+
+
+  return {
+    valid: true,
+
+    error: "",
+
+    result: {
+      ...emptyResult,
+
+      status,
+
+      changed,
+
+      trigger,
+
+      keptBlocks:
+        cloneValue(
+          keptBlocks
+        ),
+
+      completedBlocks:
+        cloneValue(
+          completedBlocks
+        ),
+
+      elapsedUnconfirmedBlocks:
+        cloneValue(
+          elapsedUnconfirmedBlocks
+        ),
+
+      removedBlocks:
+        cloneValue(
+          removedBlocks
+        ),
+
+      replacementBlocks:
+        cloneValue(
+          replacementBlocks
+        ),
+
+      unscheduled:
+        cloneValue(
+          unscheduled
+        ),
+
+      reasons: [],
+
+      summary: {
+        ...emptyResult.summary,
+
+        originalBlocks:
+          analysis.blocks.length,
+
+        keptBlocks:
+          keptBlocks.length,
+
+        completedBlocks:
+          completedBlocks.length,
+
+        elapsedUnconfirmedBlocks:
+          elapsedUnconfirmedBlocks
+            .length,
+
+        removedBlocks:
+          removedBlocks.length,
+
+        replacementBlocks:
+          replacementBlocks.length,
+
+        readyToRescheduleMinutes,
+
+        reviewHeldMinutes:
+          Number(
+            remainingWork
+              .summary
+              .reviewHeldMinutes
+          ),
+
+        replacementScheduledMinutes,
+
+        replacementUnscheduledMinutes,
+
+        activeFutureMinutes:
+          sumBlockMinutes(
+            keptBlocks
+          ) +
+          replacementScheduledMinutes,
+
+        replacementScheduler:
+          cloneValue(
+            replacementSummary
+          ),
+      },
+    },
+  };
+};
