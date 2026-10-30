@@ -7,6 +7,8 @@ import {
   ChevronRight,
   Clock3,
   ListTodo,
+  CircleAlert,
+  RefreshCw,
 } from "lucide-react";
 
 import {
@@ -26,6 +28,15 @@ import {
   generateWeeklySchedule,
   UNSCHEDULED_REASON,
 } from "../../services/schedulingEngine.js";
+
+import {
+  ADAPTIVE_RESCHEDULE_STATUS,
+  analyzeAdaptiveScheduleState,
+  calculateAdaptiveRemainingWork,
+  createAdaptiveReschedulingSnapshot,
+  generateAdaptiveReplacementSchedule,
+  RESCHEDULE_TRIGGER,
+} from "../../services/adaptiveReschedulingEngine.js";
 
 import "./planner.css";
 
@@ -511,6 +522,150 @@ const getMinutesBetweenTimes = (
   );
 };
 
+const padTimePart = (
+  value
+) =>
+  String(
+    value
+  ).padStart(
+    2,
+    "0"
+  );
+
+
+const toLocalOffsetIsoDateTime = (
+  date
+) => {
+  const year =
+    date.getFullYear();
+
+
+  const month =
+    padTimePart(
+      date.getMonth() + 1
+    );
+
+
+  const day =
+    padTimePart(
+      date.getDate()
+    );
+
+
+  const hours =
+    padTimePart(
+      date.getHours()
+    );
+
+
+  const minutes =
+    padTimePart(
+      date.getMinutes()
+    );
+
+
+  const seconds =
+    padTimePart(
+      date.getSeconds()
+    );
+
+
+  const offsetMinutes =
+    -date.getTimezoneOffset();
+
+
+  if (
+    offsetMinutes === 0
+  ) {
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+  }
+
+
+  const sign =
+    offsetMinutes >= 0
+      ? "+"
+      : "-";
+
+
+  const absoluteOffset =
+    Math.abs(
+      offsetMinutes
+    );
+
+
+  const offsetHours =
+    padTimePart(
+      Math.floor(
+        absoluteOffset / 60
+      )
+    );
+
+
+  const offsetRemainingMinutes =
+    padTimePart(
+      absoluteOffset % 60
+    );
+
+
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${sign}${offsetHours}:${offsetRemainingMinutes}`;
+};
+const getAdaptiveStatusCopy = (
+  status
+) => {
+  if (
+    status ===
+    ADAPTIVE_RESCHEDULE_STATUS
+      .NEEDS_REVIEW
+  ) {
+    return {
+      title:
+        "Some earlier study blocks need review.",
+
+      message:
+        "CozyCram found elapsed blocks without completion confirmation. They have not been treated as completed or missed.",
+    };
+  }
+
+
+  if (
+    status ===
+    ADAPTIVE_RESCHEDULE_STATUS
+      .BLOCKED
+  ) {
+    return {
+      title:
+        "No safe replacement time is available.",
+
+      message:
+        "Some work needs rescheduling, but the remaining eligible study time in this week cannot safely hold it.",
+    };
+  }
+
+
+  if (
+    status ===
+    ADAPTIVE_RESCHEDULE_STATUS
+      .ADJUSTED
+  ) {
+    return {
+      title:
+        "A replacement preview is ready.",
+
+      message:
+        "CozyCram preserved valid future blocks and found safe replacement time for work that can be adapted.",
+    };
+  }
+
+
+  return {
+    title:
+      "Your remaining plan still fits.",
+
+    message:
+      "CozyCram did not find known work that needs a replacement block right now.",
+  };
+};
+
 function PlannerPage() {
   const [initialData] =
     useState(
@@ -556,6 +711,22 @@ const [
 ] = useState(
   ""
 );
+
+const [
+  adaptiveReview,
+  setAdaptiveReview,
+] = useState(
+  null
+);
+
+
+const [
+  adaptiveError,
+  setAdaptiveError,
+] = useState(
+  null
+);
+
   const studyData =
     initialData.data;
 
@@ -648,6 +819,19 @@ const [
     );
 
 const plannerTaskMap =
+  new Map(
+    tasks.map(
+      (task) => [
+        String(
+          task.id
+        ),
+
+        task,
+      ]
+    )
+  );
+
+const adaptiveTaskMap =
   new Map(
     tasks.map(
       (task) => [
@@ -981,6 +1165,22 @@ const activeScheduleError =
     ? scheduleNotice
     : "";
 
+    const activeAdaptiveReview =
+  activeSchedule &&
+  adaptiveReview
+    ?.weekStart ===
+      weekStartKey
+    ? adaptiveReview
+    : null;
+
+
+const activeAdaptiveError =
+  adaptiveError
+    ?.weekStart ===
+      weekStartKey
+    ? adaptiveError.message
+    : "";
+
 const selectedDateBlocks =
   activeSchedule
     ? activeSchedule.blocks
@@ -1053,6 +1253,14 @@ const handleToday =
       ""
     );
 
+    setAdaptiveReview(
+  null
+);
+
+
+setAdaptiveError(
+  null
+);
 
     const generation =
       generateWeeklySchedule(
@@ -1096,6 +1304,218 @@ const handleToday =
         : "Schedule generated using your current planning inputs."
     );
   };
+  const setAdaptiveReviewFailure = (
+  message
+) => {
+  setAdaptiveReview(
+    null
+  );
+
+
+  setAdaptiveError({
+    weekStart:
+      weekStartKey,
+
+    message:
+      message ||
+      "CozyCram could not safely review this plan.",
+  });
+};
+
+const handleReviewCurrentPlan =
+  () => {
+    setAdaptiveError(
+      null
+    );
+
+
+    if (
+      !activeSchedule
+    ) {
+      setAdaptiveReviewFailure(
+        "Generate this week's schedule before reviewing it for adaptation."
+      );
+
+      return;
+    }
+
+
+    const asOfDateTime =
+      toLocalOffsetIsoDateTime(
+        new Date()
+      );
+
+
+    const snapshotResult =
+      createAdaptiveReschedulingSnapshot({
+        studyData,
+
+        scheduleResult:
+          activeSchedule,
+
+        asOfDateTime,
+
+        completedBlockIds: [],
+      });
+
+
+    if (
+      !snapshotResult.valid
+    ) {
+      setAdaptiveReviewFailure(
+        snapshotResult.error
+      );
+
+      return;
+    }
+
+
+    const analysisResult =
+      analyzeAdaptiveScheduleState(
+        snapshotResult.snapshot
+      );
+
+
+    if (
+      !analysisResult.valid
+    ) {
+      setAdaptiveReviewFailure(
+        analysisResult.error
+      );
+
+      return;
+    }
+
+
+    const remainingWorkResult =
+      calculateAdaptiveRemainingWork({
+        snapshot:
+          snapshotResult.snapshot,
+
+        analysis:
+          analysisResult.analysis,
+      });
+
+
+    if (
+      !remainingWorkResult.valid
+    ) {
+      setAdaptiveReviewFailure(
+        remainingWorkResult.error
+      );
+
+      return;
+    }
+
+
+    const replacementResult =
+      generateAdaptiveReplacementSchedule({
+        snapshot:
+          snapshotResult.snapshot,
+
+        analysis:
+          analysisResult.analysis,
+
+        remainingWork:
+          remainingWorkResult
+            .remainingWork,
+
+        trigger:
+          RESCHEDULE_TRIGGER
+            .USER_REQUESTED,
+      });
+
+
+    if (
+      !replacementResult.valid
+    ) {
+      setAdaptiveReviewFailure(
+        replacementResult.error
+      );
+
+      return;
+    }
+
+
+    setAdaptiveReview({
+      weekStart:
+        weekStartKey,
+
+      reviewedAt:
+        asOfDateTime,
+
+      snapshot:
+        snapshotResult.snapshot,
+
+      analysis:
+        analysisResult.analysis,
+
+      remainingWork:
+        remainingWorkResult
+          .remainingWork,
+
+      result:
+        replacementResult.result,
+    });
+  };
+
+const adaptiveResult =
+  activeAdaptiveReview
+    ?.result ||
+  null;
+
+const adaptiveStatusCopy =
+  adaptiveResult
+    ? getAdaptiveStatusCopy(
+        adaptiveResult.status
+      )
+    : null;
+
+
+const adaptiveReplacementBlocks =
+  Array.isArray(
+    adaptiveResult
+      ?.replacementBlocks
+  )
+    ? adaptiveResult
+        .replacementBlocks
+    : [];
+
+
+const adaptiveElapsedBlocks =
+  Array.isArray(
+    adaptiveResult
+      ?.elapsedUnconfirmedBlocks
+  )
+    ? adaptiveResult
+        .elapsedUnconfirmedBlocks
+    : [];
+
+
+const adaptiveUnscheduled =
+  Array.isArray(
+    adaptiveResult
+      ?.unscheduled
+  )
+    ? adaptiveResult
+        .unscheduled
+    : [];
+
+
+const adaptiveUnscheduledMinutes =
+  adaptiveUnscheduled.reduce(
+    (
+      total,
+      item
+    ) =>
+      total +
+      (
+        Number(
+          item.remainingMinutes
+        ) || 0
+      ),
+    0
+  );
 
   return (
     <section
@@ -1705,6 +2125,388 @@ const dayIsAvailable =
     </div>
   )}
 </section>
+{activeSchedule && (
+<section
+    className="planner-adaptive"
+    aria-labelledby="planner-adaptive-title"
+  >
+    <div className="planner-adaptive__header">
+      <div>
+        <p className="planner-adaptive__eyebrow">
+          ADAPTIVE REVIEW
+        </p>
+
+        <h3 id="planner-adaptive-title">
+          Check whether this plan still fits
+        </h3>
+
+        <p>
+          Review the generated week using
+          the current time and planning
+          inputs. CozyCram will preview safe
+          changes without replacing your
+          current schedule.
+        </p>
+      </div>
+
+
+      <button
+        type="button"
+        className="planner-adaptive__action"
+        onClick={
+          handleReviewCurrentPlan
+        }
+      >
+        <RefreshCw
+          size={17}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        {activeAdaptiveReview
+          ? "Review again"
+          : "Review current plan"}
+      </button>
+    </div>
+
+
+    {activeAdaptiveError && (
+      <div
+        className="planner-adaptive__error"
+        role="alert"
+      >
+        <CircleAlert
+          size={20}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        <p>
+          {activeAdaptiveError}
+        </p>
+      </div>
+    )}
+
+
+    {activeAdaptiveReview &&
+      adaptiveResult &&
+      adaptiveStatusCopy && (
+      <>
+        <div
+          className={`planner-adaptive__status planner-adaptive__status--${adaptiveResult.status}`}
+          role="status"
+          aria-live="polite"
+        >
+          {(
+            adaptiveResult.status ===
+              ADAPTIVE_RESCHEDULE_STATUS
+                .NEEDS_REVIEW ||
+            adaptiveResult.status ===
+              ADAPTIVE_RESCHEDULE_STATUS
+                .BLOCKED
+          ) ? (
+            <CircleAlert
+              size={22}
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
+          ) : (
+            <CheckCircle2
+              size={22}
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
+          )}
+
+
+          <div>
+            <strong>
+              {
+                adaptiveStatusCopy
+                  .title
+              }
+            </strong>
+
+            <p>
+              {
+                adaptiveStatusCopy
+                  .message
+              }
+            </p>
+          </div>
+        </div>
+
+
+        <div
+          className="planner-adaptive__summary"
+          aria-label="Adaptive plan review summary"
+        >
+          <article>
+            <span>
+              Kept blocks
+            </span>
+
+            <strong>
+              {
+                adaptiveResult
+                  .keptBlocks
+                  .length
+              }
+            </strong>
+          </article>
+
+
+          <article>
+            <span>
+              Replacement preview
+            </span>
+
+            <strong>
+              {
+                adaptiveReplacementBlocks
+                  .length
+              }
+            </strong>
+          </article>
+
+
+          <article>
+            <span>
+              Needs review
+            </span>
+
+            <strong>
+              {
+                adaptiveElapsedBlocks
+                  .length
+              }
+            </strong>
+          </article>
+
+
+          <article>
+            <span>
+              Ready work
+            </span>
+
+            <strong>
+              {
+                formatDuration(
+                  adaptiveResult
+                    .summary
+                    .readyToRescheduleMinutes
+                )
+              }
+            </strong>
+          </article>
+        </div>
+      </>
+    )}
+    {adaptiveElapsedBlocks.length > 0 && (
+  <div className="planner-adaptive__review">
+    <div className="planner-adaptive__subheading">
+      <div>
+        <p>
+          NEEDS YOUR REVIEW
+        </p>
+
+        <h4>
+          Earlier study blocks
+        </h4>
+      </div>
+
+      <span>
+        {
+          adaptiveElapsedBlocks
+            .length
+        }
+      </span>
+    </div>
+
+
+    <div className="planner-adaptive__review-list">
+      {adaptiveElapsedBlocks.map(
+        (block) => {
+          const task =
+            adaptiveTaskMap.get(
+              String(
+                block.taskId
+              )
+            );
+
+
+          return (
+            <article
+              key={block.id}
+              className="planner-adaptive__review-item"
+            >
+              <div>
+                <strong>
+                  {
+                    task?.title ||
+                    "Study block"
+                  }
+                </strong>
+
+                <span>
+                  {block.date}
+                  {" · "}
+                  {block.startTime}
+                  {" – "}
+                  {block.endTime}
+                  {" · "}
+                  {
+                    formatDuration(
+                      block.durationMinutes
+                    )
+                  }
+                </span>
+              </div>
+
+
+              <span className="planner-adaptive__review-badge">
+                Needs confirmation
+              </span>
+            </article>
+          );
+        }
+      )}
+    </div>
+
+
+    <div className="planner-adaptive__review-note">
+      <CircleAlert
+        size={19}
+        strokeWidth={1.8}
+        aria-hidden="true"
+      />
+
+      <p>
+        These blocks have only been marked
+        for review. CozyCram has not assumed
+        that you completed or missed them.
+      </p>
+    </div>
+  </div>
+)}
+{adaptiveReplacementBlocks.length > 0 && (
+  <div className="planner-adaptive__preview">
+    <div className="planner-adaptive__subheading">
+      <div>
+        <p>
+          REPLACEMENT PREVIEW
+        </p>
+
+        <h4>
+          Proposed future blocks
+        </h4>
+      </div>
+
+      <span>
+        {
+          adaptiveReplacementBlocks
+            .length
+        }
+      </span>
+    </div>
+
+
+    <div className="planner-adaptive__preview-list">
+      {adaptiveReplacementBlocks.map(
+        (block) => {
+          const task =
+            adaptiveTaskMap.get(
+              String(
+                block.taskId
+              )
+            );
+
+
+          const subjectName =
+            taskSubjectMap.get(
+              String(
+                block.subjectId
+              )
+            ) ||
+            "Unknown subject";
+
+
+          return (
+            <article
+              key={block.id}
+              className="planner-adaptive__preview-item"
+            >
+              <div>
+                <strong>
+                  {
+                    task?.title ||
+                    "Study block"
+                  }
+                </strong>
+
+                <span>
+                  {subjectName}
+                </span>
+              </div>
+
+
+              <div className="planner-adaptive__preview-time">
+                <strong>
+                  {block.date}
+                </strong>
+
+                <span>
+                  {block.startTime}
+                  {" – "}
+                  {block.endTime}
+                  {" · "}
+                  {
+                    formatDuration(
+                      block.durationMinutes
+                    )
+                  }
+                </span>
+              </div>
+            </article>
+          );
+        }
+      )}
+    </div>
+  </div>
+)}
+{adaptiveUnscheduledMinutes > 0 && (
+  <div className="planner-adaptive__unplaced">
+    <CircleAlert
+      size={20}
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
+
+    <div>
+      <strong>
+        {
+          formatDuration(
+            adaptiveUnscheduledMinutes
+          )
+        }
+        {" "}
+        could not fit in the
+        replacement preview.
+      </strong>
+
+      <p>
+        CozyCram kept this work visible
+        instead of silently dropping it.
+      </p>
+    </div>
+  </div>
+)}
+   <p className="planner-adaptive__preview-note">
+  Preview only — your current generated
+  schedule has not been replaced.
+</p>
+  </section>
+)}
 
   <section
     className="planner-selected-day"
