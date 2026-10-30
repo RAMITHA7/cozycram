@@ -87,6 +87,20 @@ export const ADAPTIVE_RESCHEDULE_STATUS = {
     "blocked",
 };
 
+export const ADAPTIVE_WORK_STATE = {
+  CONFIRMED_COMPLETE:
+    "confirmed_complete",
+
+  FUTURE_COVERED:
+    "future_covered",
+
+  NEEDS_REVIEW:
+    "needs_review",
+
+  READY_TO_RESCHEDULE:
+    "ready_to_reschedule",
+};
+
 const WEEKDAY_KEYS = [
   "sunday",
   "monday",
@@ -992,7 +1006,6 @@ const classifyAdaptiveScheduleBlock = ({
     };
   }
 
-
   const driftReasons =
     getBlockDriftReasons({
       block,
@@ -1417,6 +1430,1066 @@ const cloneValue = (
 
 
   return value;
+};
+
+const getCurrentTaskEstimate = (
+  task
+) => {
+  const estimatedMinutes =
+    Number(
+      task?.estimatedMinutes
+    );
+
+
+  if (
+    !Number.isFinite(
+      estimatedMinutes
+    ) ||
+    !Number.isInteger(
+      estimatedMinutes
+    ) ||
+    estimatedMinutes <= 0
+  ) {
+    return null;
+  }
+
+
+  return estimatedMinutes;
+};
+
+const sumBlockMinutes = (
+  blocks
+) =>
+  blocks.reduce(
+    (
+      total,
+      block
+    ) =>
+      total +
+      (
+        Number(
+          block?.durationMinutes
+        ) || 0
+      ),
+    0
+  );
+
+  const validateRemainingWorkAnalysis = ({
+  snapshot,
+  analysis,
+}) => {
+  if (
+    !snapshot ||
+    typeof snapshot !==
+      "object" ||
+    snapshot.version !==
+      ADAPTIVE_RESCHEDULE_VERSION
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Remaining-work calculation requires a valid adaptive snapshot.",
+    };
+  }
+
+
+  if (
+    !analysis ||
+    typeof analysis !==
+      "object" ||
+    analysis.version !==
+      ADAPTIVE_RESCHEDULE_VERSION
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Remaining-work calculation requires valid adaptive schedule analysis.",
+    };
+  }
+
+
+  if (
+    analysis.scheduleVersion !==
+      snapshot.scheduleVersion ||
+    analysis.weekStart !==
+      snapshot.weekStart ||
+    analysis.weekEnd !==
+      snapshot.weekEnd ||
+    analysis.asOfDateTime !==
+      snapshot.asOfDateTime
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Adaptive analysis does not belong to the supplied adaptive snapshot.",
+    };
+  }
+
+
+  if (
+    !Array.isArray(
+      analysis.blocks
+    )
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Adaptive analysis is missing its classified schedule blocks.",
+    };
+  }
+
+
+  const originalBlocks =
+    Array.isArray(
+      snapshot
+        ?.originalSchedule
+        ?.blocks
+    )
+      ? snapshot
+          .originalSchedule
+          .blocks
+      : [];
+
+
+  if (
+    analysis.blocks.length !==
+      originalBlocks.length
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Adaptive analysis does not contain the same block set as the original schedule.",
+    };
+  }
+
+
+  const originalIds =
+    originalBlocks.map(
+      (block) =>
+        String(
+          block.id
+        )
+    );
+
+
+  const analysisIds =
+    analysis.blocks.map(
+      (block) =>
+        String(
+          block.id
+        )
+    );
+
+
+  if (
+    new Set(
+      originalIds
+    ).size !==
+      originalIds.length ||
+    new Set(
+      analysisIds
+    ).size !==
+      analysisIds.length
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Adaptive remaining-work calculation cannot safely process duplicate schedule block IDs.",
+    };
+  }
+
+
+  const originalIdSet =
+    new Set(
+      originalIds
+    );
+
+
+  const hasUnknownBlock =
+    analysisIds.some(
+      (blockId) =>
+        !originalIdSet.has(
+          blockId
+        )
+    );
+
+
+  if (
+    hasUnknownBlock
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Adaptive analysis contains a block that does not belong to the original schedule.",
+    };
+  }
+
+
+  for (
+    const block
+    of analysis.blocks
+  ) {
+    const validation =
+      validateOriginalScheduleBlock(
+        block
+      );
+
+
+    if (
+      !validation.valid
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "Adaptive remaining-work calculation received an invalid classified block.",
+      };
+    }
+
+
+    if (
+      !Object.values(
+        RESCHEDULE_BLOCK_STATE
+      ).includes(
+        block.adaptiveState
+      )
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "Adaptive analysis contains an unknown block review state.",
+      };
+    }
+  }
+
+
+  return {
+    valid: true,
+
+    error: "",
+  };
+};
+
+const createOriginalUnscheduledMinutesMap = (
+  snapshot
+) => {
+  const unscheduled =
+    Array.isArray(
+      snapshot
+        ?.originalSchedule
+        ?.unscheduled
+    )
+      ? snapshot
+          .originalSchedule
+          .unscheduled
+      : [];
+
+
+  const minutesByTask =
+    new Map();
+
+
+  for (
+    const item
+    of unscheduled
+  ) {
+    if (
+      item?.taskId ===
+        undefined ||
+      item?.taskId ===
+        null
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "Original unscheduled work is missing a task identifier.",
+
+        minutesByTask:
+          new Map(),
+      };
+    }
+
+
+    const remainingMinutes =
+      Number(
+        item.remainingMinutes
+      );
+
+
+    if (
+      !Number.isFinite(
+        remainingMinutes
+      ) ||
+      remainingMinutes < 0
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "Original unscheduled work contains an invalid remaining-minute value.",
+
+        minutesByTask:
+          new Map(),
+      };
+    }
+
+
+    const taskId =
+      String(
+        item.taskId
+      );
+
+
+    minutesByTask.set(
+      taskId,
+      (
+        minutesByTask.get(
+          taskId
+        ) || 0
+      ) +
+        remainingMinutes
+    );
+  }
+
+
+  return {
+    valid: true,
+
+    error: "",
+
+    minutesByTask,
+  };
+};
+
+const createBlocksByTaskMap = (
+  blocks
+) => {
+  const blocksByTask =
+    new Map();
+
+
+  for (
+    const block
+    of blocks
+  ) {
+    const taskId =
+      String(
+        block.taskId
+      );
+
+
+    if (
+      !blocksByTask.has(
+        taskId
+      )
+    ) {
+      blocksByTask.set(
+        taskId,
+        []
+      );
+    }
+
+
+    blocksByTask
+      .get(
+        taskId
+      )
+      .push(
+        block
+      );
+  }
+
+
+  return blocksByTask;
+};
+
+const getBlocksWithAdaptiveState = ({
+  blocks,
+  state,
+}) =>
+  blocks.filter(
+    (block) =>
+      block.adaptiveState ===
+      state
+  );
+
+  const resolveAdaptiveWorkState = ({
+  currentEstimatedMinutes,
+  confirmedCompletedMinutes,
+  futurePlannedMinutes,
+  reviewHeldMinutes,
+  readyToRescheduleMinutes,
+}) => {
+  if (
+    confirmedCompletedMinutes >=
+      currentEstimatedMinutes
+  ) {
+    return (
+      ADAPTIVE_WORK_STATE
+        .CONFIRMED_COMPLETE
+    );
+  }
+
+
+  if (
+    reviewHeldMinutes > 0
+  ) {
+    return (
+      ADAPTIVE_WORK_STATE
+        .NEEDS_REVIEW
+    );
+  }
+
+
+  if (
+    readyToRescheduleMinutes >
+    0
+  ) {
+    return (
+      ADAPTIVE_WORK_STATE
+        .READY_TO_RESCHEDULE
+    );
+  }
+
+
+  if (
+    futurePlannedMinutes > 0
+  ) {
+    return (
+      ADAPTIVE_WORK_STATE
+        .FUTURE_COVERED
+    );
+  }
+
+
+  return (
+    ADAPTIVE_WORK_STATE
+      .READY_TO_RESCHEDULE
+  );
+};
+
+const calculateTaskRemainingWork = ({
+  task,
+  taskBlocks,
+  originalUnscheduledMinutes,
+  hadOriginalSchedulePresence,
+}) => {
+  const currentEstimatedMinutes =
+    getCurrentTaskEstimate(
+      task
+    );
+
+
+  if (
+    currentEstimatedMinutes ===
+    null
+  ) {
+    return {
+      valid: false,
+
+      error:
+        `Task "${String(
+          task?.title ??
+            task?.id ??
+            "unknown"
+        )}" has an invalid current work estimate.`,
+
+      work: null,
+    };
+  }
+
+
+  const confirmedBlocks =
+    getBlocksWithAdaptiveState({
+      blocks:
+        taskBlocks,
+
+      state:
+        RESCHEDULE_BLOCK_STATE
+          .CONFIRMED_COMPLETE,
+    });
+
+
+  const futureBlocks =
+    getBlocksWithAdaptiveState({
+      blocks:
+        taskBlocks,
+
+      state:
+        RESCHEDULE_BLOCK_STATE
+          .FUTURE_PLANNED,
+    });
+
+
+  const elapsedUnconfirmedBlocks =
+    getBlocksWithAdaptiveState({
+      blocks:
+        taskBlocks,
+
+      state:
+        RESCHEDULE_BLOCK_STATE
+          .ELAPSED_UNCONFIRMED,
+    });
+
+
+  const invalidatedBlocks =
+    getBlocksWithAdaptiveState({
+      blocks:
+        taskBlocks,
+
+      state:
+        RESCHEDULE_BLOCK_STATE
+          .INVALIDATED,
+    });
+
+
+  const observedConfirmedMinutes =
+    sumBlockMinutes(
+      confirmedBlocks
+    );
+
+
+  const observedFutureMinutes =
+    sumBlockMinutes(
+      futureBlocks
+    );
+
+
+  const observedElapsedUnconfirmedMinutes =
+    sumBlockMinutes(
+      elapsedUnconfirmedBlocks
+    );
+
+
+  const observedInvalidatedMinutes =
+    sumBlockMinutes(
+      invalidatedBlocks
+    );
+
+
+  const confirmedCompletedMinutes =
+    Math.min(
+      currentEstimatedMinutes,
+      observedConfirmedMinutes
+    );
+
+
+  const afterConfirmed =
+    Math.max(
+      0,
+      currentEstimatedMinutes -
+        confirmedCompletedMinutes
+    );
+
+
+  const futurePlannedMinutes =
+    Math.min(
+      afterConfirmed,
+      observedFutureMinutes
+    );
+
+
+  const afterFuture =
+    Math.max(
+      0,
+      afterConfirmed -
+        futurePlannedMinutes
+    );
+
+
+  const reviewHeldMinutes =
+    Math.min(
+      afterFuture,
+      observedElapsedUnconfirmedMinutes
+    );
+
+
+  const readyToRescheduleMinutes =
+    Math.max(
+      0,
+      afterFuture -
+        reviewHeldMinutes
+    );
+
+
+  const accountedMinutes =
+    confirmedCompletedMinutes +
+    futurePlannedMinutes +
+    reviewHeldMinutes +
+    readyToRescheduleMinutes;
+
+
+  if (
+    accountedMinutes !==
+    currentEstimatedMinutes
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Adaptive remaining-work accounting failed for a current open task.",
+
+      work: null,
+    };
+  }
+
+
+  const state =
+    resolveAdaptiveWorkState({
+      currentEstimatedMinutes,
+
+      confirmedCompletedMinutes,
+
+      futurePlannedMinutes,
+
+      reviewHeldMinutes,
+
+      readyToRescheduleMinutes,
+    });
+
+
+  return {
+    valid: true,
+
+    error: "",
+
+    work: {
+      taskId:
+        task.id,
+
+      subjectId:
+        task.subjectId,
+
+      task:
+        cloneValue(
+          task
+        ),
+
+      state,
+
+      isNewTask:
+        !hadOriginalSchedulePresence,
+
+      currentEstimatedMinutes,
+
+      confirmedCompletedMinutes,
+
+      futurePlannedMinutes,
+
+      reviewHeldMinutes,
+
+      readyToRescheduleMinutes,
+
+      observedMinutes: {
+        confirmedCompleted:
+          observedConfirmedMinutes,
+
+        futurePlanned:
+          observedFutureMinutes,
+
+        elapsedUnconfirmed:
+          observedElapsedUnconfirmedMinutes,
+
+        invalidated:
+          observedInvalidatedMinutes,
+
+        originalUnscheduled:
+          originalUnscheduledMinutes,
+      },
+
+      excessMinutes: {
+        confirmedCompleted:
+          Math.max(
+            0,
+            observedConfirmedMinutes -
+              confirmedCompletedMinutes
+          ),
+
+        futurePlanned:
+          Math.max(
+            0,
+            observedFutureMinutes -
+              futurePlannedMinutes
+          ),
+
+        elapsedUnconfirmed:
+          Math.max(
+            0,
+            observedElapsedUnconfirmedMinutes -
+              reviewHeldMinutes
+          ),
+      },
+
+      blockIds: {
+        confirmedCompleted:
+          confirmedBlocks.map(
+            (block) =>
+              block.id
+          ),
+
+        futurePlanned:
+          futureBlocks.map(
+            (block) =>
+              block.id
+          ),
+
+        elapsedUnconfirmed:
+          elapsedUnconfirmedBlocks.map(
+            (block) =>
+              block.id
+          ),
+
+        invalidated:
+          invalidatedBlocks.map(
+            (block) =>
+              block.id
+          ),
+      },
+
+      accounting: {
+        currentEstimatedMinutes,
+
+        accountedMinutes,
+
+        valid:
+          accountedMinutes ===
+          currentEstimatedMinutes,
+      },
+    },
+  };
+};
+
+export const calculateAdaptiveRemainingWork = ({
+  snapshot,
+  analysis,
+}) => {
+  const inputValidation =
+    validateRemainingWorkAnalysis({
+      snapshot,
+      analysis,
+    });
+
+
+  if (
+    !inputValidation.valid
+  ) {
+    return {
+      valid: false,
+
+      error:
+        inputValidation.error,
+
+      remainingWork: null,
+    };
+  }
+
+
+  const unscheduledValidation =
+    createOriginalUnscheduledMinutesMap(
+      snapshot
+    );
+
+
+  if (
+    !unscheduledValidation.valid
+  ) {
+    return {
+      valid: false,
+
+      error:
+        unscheduledValidation
+          .error,
+
+      remainingWork: null,
+    };
+  }
+
+
+  const tasks =
+    Array.isArray(
+      snapshot
+        ?.studyData
+        ?.tasks
+    )
+      ? snapshot
+          .studyData
+          .tasks
+      : [];
+
+
+  const openTasks =
+    tasks.filter(
+      (task) =>
+        task.status ===
+        "todo"
+    );
+
+
+  const blocksByTask =
+    createBlocksByTaskMap(
+      analysis.blocks
+    );
+
+
+  const workItems =
+    [];
+
+
+  for (
+    const task
+    of openTasks
+  ) {
+    const taskId =
+      String(
+        task.id
+      );
+
+
+    const taskBlocks =
+      blocksByTask.get(
+        taskId
+      ) || [];
+
+
+    const originalUnscheduledMinutes =
+      unscheduledValidation
+        .minutesByTask
+        .get(
+          taskId
+        ) || 0;
+
+
+    const hadOriginalSchedulePresence =
+      taskBlocks.length > 0 ||
+      unscheduledValidation
+        .minutesByTask
+        .has(
+          taskId
+        );
+
+
+    const calculation =
+      calculateTaskRemainingWork({
+        task,
+
+        taskBlocks,
+
+        originalUnscheduledMinutes,
+
+        hadOriginalSchedulePresence,
+      });
+
+
+    if (
+      !calculation.valid
+    ) {
+      return {
+        valid: false,
+
+        error:
+          calculation.error,
+
+        remainingWork: null,
+      };
+    }
+
+
+    workItems.push(
+      calculation.work
+    );
+  }
+
+
+  const summary =
+    workItems.reduce(
+      (
+        totals,
+        item
+      ) => {
+        totals.currentEstimatedMinutes +=
+          item.currentEstimatedMinutes;
+
+
+        totals.confirmedCompletedMinutes +=
+          item.confirmedCompletedMinutes;
+
+
+        totals.futurePlannedMinutes +=
+          item.futurePlannedMinutes;
+
+
+        totals.reviewHeldMinutes +=
+          item.reviewHeldMinutes;
+
+
+        totals.readyToRescheduleMinutes +=
+          item.readyToRescheduleMinutes;
+
+
+        totals.observedInvalidatedMinutes +=
+          item.observedMinutes
+            .invalidated;
+
+
+        totals.originalUnscheduledMinutes +=
+          item.observedMinutes
+            .originalUnscheduled;
+
+
+        if (
+          item.state ===
+          ADAPTIVE_WORK_STATE
+            .NEEDS_REVIEW
+        ) {
+          totals.tasksNeedingReview +=
+            1;
+        }
+
+
+        if (
+          item.readyToRescheduleMinutes >
+          0
+        ) {
+          totals.tasksWithReadyWork +=
+            1;
+        }
+
+
+        if (
+          item.state ===
+          ADAPTIVE_WORK_STATE
+            .FUTURE_COVERED
+        ) {
+          totals.tasksCoveredByFuturePlan +=
+            1;
+        }
+
+
+        if (
+          item.state ===
+          ADAPTIVE_WORK_STATE
+            .CONFIRMED_COMPLETE
+        ) {
+          totals.tasksConfirmedComplete +=
+            1;
+        }
+
+
+        if (
+          item.isNewTask
+        ) {
+          totals.newTasks +=
+            1;
+        }
+
+
+        return totals;
+      },
+      {
+        openTasks:
+          workItems.length,
+
+        currentEstimatedMinutes: 0,
+
+        confirmedCompletedMinutes: 0,
+
+        futurePlannedMinutes: 0,
+
+        reviewHeldMinutes: 0,
+
+        readyToRescheduleMinutes: 0,
+
+        observedInvalidatedMinutes: 0,
+
+        originalUnscheduledMinutes: 0,
+
+        tasksNeedingReview: 0,
+
+        tasksWithReadyWork: 0,
+
+        tasksCoveredByFuturePlan: 0,
+
+        tasksConfirmedComplete: 0,
+
+        newTasks: 0,
+      }
+    );
+
+
+  const accountedMinutes =
+    summary.confirmedCompletedMinutes +
+    summary.futurePlannedMinutes +
+    summary.reviewHeldMinutes +
+    summary.readyToRescheduleMinutes;
+
+
+  if (
+    accountedMinutes !==
+    summary.currentEstimatedMinutes
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Adaptive remaining-work accounting failed across current open tasks.",
+
+      remainingWork: null,
+    };
+  }
+
+
+  return {
+    valid: true,
+
+    error: "",
+
+    remainingWork: {
+      version:
+        ADAPTIVE_RESCHEDULE_VERSION,
+
+      scheduleVersion:
+        snapshot
+          .scheduleVersion,
+
+      weekStart:
+        snapshot
+          .weekStart,
+
+      weekEnd:
+        snapshot
+          .weekEnd,
+
+      asOfDateTime:
+        snapshot
+          .asOfDateTime,
+
+      tasks:
+        workItems,
+
+      requiresReview:
+        summary.reviewHeldMinutes >
+        0,
+
+      hasReadyWork:
+        summary.readyToRescheduleMinutes >
+        0,
+
+      summary: {
+        ...summary,
+
+        accountedMinutes,
+      },
+    },
+  };
 };
 
 const validateScheduleResult = (
