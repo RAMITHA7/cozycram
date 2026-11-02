@@ -33,8 +33,11 @@ import {
   ADAPTIVE_RESCHEDULE_STATUS,
   analyzeAdaptiveScheduleState,
   calculateAdaptiveRemainingWork,
+  createAdaptiveChangeExplanation,
   createAdaptiveReschedulingSnapshot,
+  createAppliedAdaptiveSchedule,
   generateAdaptiveReplacementSchedule,
+  RESCHEDULE_BLOCK_CONFIRMATION,
   RESCHEDULE_TRIGGER,
 } from "../../services/adaptiveReschedulingEngine.js";
 
@@ -727,6 +730,13 @@ const [
   null
 );
 
+const [
+  adaptiveApplyNotice,
+  setAdaptiveApplyNotice,
+] = useState(
+  null
+);
+
   const studyData =
     initialData.data;
 
@@ -1173,6 +1183,13 @@ const activeScheduleError =
     ? adaptiveReview
     : null;
 
+   const activeAdaptiveApplyNotice =
+  adaptiveApplyNotice
+    ?.weekStart ===
+      weekStartKey
+    ? adaptiveApplyNotice
+        .message
+    : "";
 
 const activeAdaptiveError =
   adaptiveError
@@ -1262,6 +1279,10 @@ setAdaptiveError(
   null
 );
 
+setAdaptiveApplyNotice(
+  null
+);
+
     const generation =
       generateWeeklySchedule(
         studyData,
@@ -1322,9 +1343,258 @@ setAdaptiveError(
   });
 };
 
+const runAdaptiveReview = ({
+  asOfDateTime,
+  blockDecisions = {},
+  reviewCandidates = [],
+}) => {
+  if (
+    !activeSchedule
+  ) {
+    setAdaptiveReviewFailure(
+      "Generate this week's schedule before reviewing it for adaptation."
+    );
+
+    return false;
+  }
+
+
+  const decisionEntries =
+    Object.entries(
+      blockDecisions
+    );
+
+
+  const completedBlockIds =
+    decisionEntries
+      .filter(
+        (
+          [
+            ,
+            decision,
+          ]
+        ) =>
+          decision ===
+          RESCHEDULE_BLOCK_CONFIRMATION
+            .COMPLETED
+      )
+      .map(
+        (
+          [
+            blockId,
+          ]
+        ) =>
+          blockId
+      );
+
+
+  const remainingBlockIds =
+    decisionEntries
+      .filter(
+        (
+          [
+            ,
+            decision,
+          ]
+        ) =>
+          decision ===
+          RESCHEDULE_BLOCK_CONFIRMATION
+            .STILL_NEEDS_WORK
+      )
+      .map(
+        (
+          [
+            blockId,
+          ]
+        ) =>
+          blockId
+      );
+
+
+  const snapshotResult =
+    createAdaptiveReschedulingSnapshot({
+      studyData,
+
+      scheduleResult:
+        activeSchedule,
+
+      asOfDateTime,
+
+      completedBlockIds,
+
+      remainingBlockIds,
+    });
+
+
+  if (
+    !snapshotResult.valid
+  ) {
+    setAdaptiveReviewFailure(
+      snapshotResult.error
+    );
+
+    return false;
+  }
+
+
+  const analysisResult =
+    analyzeAdaptiveScheduleState(
+      snapshotResult.snapshot
+    );
+
+
+  if (
+    !analysisResult.valid
+  ) {
+    setAdaptiveReviewFailure(
+      analysisResult.error
+    );
+
+    return false;
+  }
+
+
+  const remainingWorkResult =
+    calculateAdaptiveRemainingWork({
+      snapshot:
+        snapshotResult.snapshot,
+
+      analysis:
+        analysisResult.analysis,
+    });
+
+
+  if (
+    !remainingWorkResult.valid
+  ) {
+    setAdaptiveReviewFailure(
+      remainingWorkResult.error
+    );
+
+    return false;
+  }
+
+
+  const replacementResult =
+    generateAdaptiveReplacementSchedule({
+      snapshot:
+        snapshotResult.snapshot,
+
+      analysis:
+        analysisResult.analysis,
+
+      remainingWork:
+        remainingWorkResult
+          .remainingWork,
+
+      trigger:
+        RESCHEDULE_TRIGGER
+          .USER_REQUESTED,
+    });
+
+
+  if (
+    !replacementResult.valid
+  ) {
+    setAdaptiveReviewFailure(
+      replacementResult.error
+    );
+
+    return false;
+  }
+
+
+  const candidateMap =
+    new Map(
+      (
+        Array.isArray(
+          reviewCandidates
+        )
+          ? reviewCandidates
+          : []
+      ).map(
+        (block) => [
+          String(
+            block.id
+          ),
+
+          block,
+        ]
+      )
+    );
+
+
+  for (
+    const block
+    of replacementResult
+      .result
+      .elapsedUnconfirmedBlocks
+  ) {
+    if (
+      !candidateMap.has(
+        String(
+          block.id
+        )
+      )
+    ) {
+      candidateMap.set(
+        String(
+          block.id
+        ),
+
+        block
+      );
+    }
+  }
+
+
+  setAdaptiveReview({
+    weekStart:
+      weekStartKey,
+
+    reviewedAt:
+      asOfDateTime,
+
+    snapshot:
+      snapshotResult.snapshot,
+
+    analysis:
+      analysisResult.analysis,
+
+    remainingWork:
+      remainingWorkResult
+        .remainingWork,
+
+    result:
+      replacementResult.result,
+
+    reviewCandidates:
+      [
+        ...candidateMap.values(),
+      ],
+
+    blockDecisions: {
+      ...blockDecisions,
+    },
+  });
+
+
+  setAdaptiveError(
+    null
+  );
+
+
+  return true;
+};
+
 const handleReviewCurrentPlan =
   () => {
     setAdaptiveError(
+      null
+    );
+
+
+    setAdaptiveApplyNotice(
       null
     );
 
@@ -1340,124 +1610,180 @@ const handleReviewCurrentPlan =
     }
 
 
-    const asOfDateTime =
-      toLocalOffsetIsoDateTime(
-        new Date()
+    const inheritedCompletedIds =
+      Array.isArray(
+        activeSchedule
+          ?.adaptive
+          ?.confirmedCompletedBlockIds
+      )
+        ? activeSchedule
+            .adaptive
+            .confirmedCompletedBlockIds
+        : [];
+
+
+    const inheritedDecisions =
+      Object.fromEntries(
+        inheritedCompletedIds.map(
+          (blockId) => [
+            String(
+              blockId
+            ),
+
+            RESCHEDULE_BLOCK_CONFIRMATION
+              .COMPLETED,
+          ]
+        )
       );
 
 
-    const snapshotResult =
-      createAdaptiveReschedulingSnapshot({
-        studyData,
+    const previousDecisions =
+      activeAdaptiveReview
+        ?.blockDecisions ||
+      {};
 
-        scheduleResult:
-          activeSchedule,
 
-        asOfDateTime,
+    const blockDecisions = {
+      ...inheritedDecisions,
+      ...previousDecisions,
+    };
 
-        completedBlockIds: [],
-      });
+
+    const previousCandidates =
+      activeAdaptiveReview
+        ?.reviewCandidates ||
+      [];
+
+
+    runAdaptiveReview({
+      asOfDateTime:
+        toLocalOffsetIsoDateTime(
+          new Date()
+        ),
+
+      blockDecisions,
+
+      reviewCandidates:
+        previousCandidates,
+    });
+  };
+
+const handleAdaptiveBlockDecision = (
+  blockId,
+  decision
+) => {
+  if (
+    !activeAdaptiveReview
+  ) {
+    return;
+  }
+
+
+  const nextDecisions = {
+    ...(
+      activeAdaptiveReview
+        .blockDecisions ||
+      {}
+    ),
+
+    [String(
+      blockId
+    )]:
+      decision,
+  };
+
+
+  runAdaptiveReview({
+    asOfDateTime:
+      activeAdaptiveReview
+        .reviewedAt,
+
+    blockDecisions:
+      nextDecisions,
+
+    reviewCandidates:
+      activeAdaptiveReview
+        .reviewCandidates ||
+      [],
+  });
+};
+
+const handleApplyAdaptivePlan =
+  () => {
+    if (
+      !activeAdaptiveReview ||
+      !adaptiveResult
+    ) {
+      return;
+    }
 
 
     if (
-      !snapshotResult.valid
+      !adaptiveReviewResolved
     ) {
       setAdaptiveReviewFailure(
-        snapshotResult.error
+        "Review every elapsed study block before applying the updated plan."
       );
 
       return;
     }
 
 
-    const analysisResult =
-      analyzeAdaptiveScheduleState(
-        snapshotResult.snapshot
-      );
-
-
-    if (
-      !analysisResult.valid
-    ) {
-      setAdaptiveReviewFailure(
-        analysisResult.error
-      );
-
-      return;
-    }
-
-
-    const remainingWorkResult =
-      calculateAdaptiveRemainingWork({
+    const appliedResult =
+      createAppliedAdaptiveSchedule({
         snapshot:
-          snapshotResult.snapshot,
-
-        analysis:
-          analysisResult.analysis,
-      });
-
-
-    if (
-      !remainingWorkResult.valid
-    ) {
-      setAdaptiveReviewFailure(
-        remainingWorkResult.error
-      );
-
-      return;
-    }
-
-
-    const replacementResult =
-      generateAdaptiveReplacementSchedule({
-        snapshot:
-          snapshotResult.snapshot,
-
-        analysis:
-          analysisResult.analysis,
+          activeAdaptiveReview
+            .snapshot,
 
         remainingWork:
-          remainingWorkResult
+          activeAdaptiveReview
             .remainingWork,
 
-        trigger:
-          RESCHEDULE_TRIGGER
-            .USER_REQUESTED,
+        result:
+          adaptiveResult,
       });
 
 
     if (
-      !replacementResult.valid
+      !appliedResult.valid
     ) {
       setAdaptiveReviewFailure(
-        replacementResult.error
+        appliedResult.error
       );
 
       return;
     }
 
 
-    setAdaptiveReview({
+    setGeneratedSchedule(
+      appliedResult.schedule
+    );
+
+
+    setGeneratedWeekStart(
+      weekStartKey
+    );
+
+
+    setAdaptiveReview(
+      null
+    );
+
+
+    setAdaptiveError(
+      null
+    );
+
+
+    setAdaptiveApplyNotice({
       weekStart:
         weekStartKey,
 
-      reviewedAt:
-        asOfDateTime,
-
-      snapshot:
-        snapshotResult.snapshot,
-
-      analysis:
-        analysisResult.analysis,
-
-      remainingWork:
-        remainingWorkResult
-          .remainingWork,
-
-      result:
-        replacementResult.result,
+      message:
+        "Updated plan applied. Confirmed completed study was protected, valid future blocks were kept, and only safe replacement work was added.",
     });
   };
+
 
 const adaptiveResult =
   activeAdaptiveReview
@@ -1471,6 +1797,14 @@ const adaptiveStatusCopy =
       )
     : null;
 
+const adaptiveExplanation =
+  adaptiveResult
+    ? createAdaptiveChangeExplanation({
+        result:
+          adaptiveResult,
+      })
+    : null;
+
 
 const adaptiveReplacementBlocks =
   Array.isArray(
@@ -1482,14 +1816,45 @@ const adaptiveReplacementBlocks =
     : [];
 
 
-const adaptiveElapsedBlocks =
+const adaptiveReviewCandidates =
   Array.isArray(
-    adaptiveResult
-      ?.elapsedUnconfirmedBlocks
+    activeAdaptiveReview
+      ?.reviewCandidates
   )
-    ? adaptiveResult
-        .elapsedUnconfirmedBlocks
+    ? activeAdaptiveReview
+        .reviewCandidates
     : [];
+
+
+const adaptiveBlockDecisions =
+  activeAdaptiveReview
+    ?.blockDecisions ||
+  {};
+
+
+const adaptiveUnresolvedReviewCount =
+  adaptiveReviewCandidates.filter(
+    (block) =>
+      !adaptiveBlockDecisions[
+        String(
+          block.id
+        )
+      ]
+  ).length;
+
+
+const adaptiveReviewResolved =
+  adaptiveUnresolvedReviewCount ===
+  0;
+
+const canApplyAdaptivePlan =
+  Boolean(
+    activeAdaptiveReview &&
+    adaptiveResult?.status !==
+      ADAPTIVE_RESCHEDULE_STATUS.NEEDS_REVIEW &&
+    adaptiveReviewResolved &&
+    adaptiveResult?.changed === true
+  );
 
 
 const adaptiveUnscheduled =
@@ -2125,6 +2490,27 @@ const dayIsAvailable =
     </div>
   )}
 </section>
+
+{activeAdaptiveApplyNotice && (
+  <div
+    className="planner-adaptive__applied-notice"
+    role="status"
+    aria-live="polite"
+  >
+    <CheckCircle2
+      size={20}
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
+
+    <p>
+      {
+        activeAdaptiveApplyNotice
+      }
+    </p>
+  </div>
+)}
+
 {activeSchedule && (
 <section
     className="planner-adaptive"
@@ -2272,15 +2658,14 @@ const dayIsAvailable =
 
           <article>
             <span>
-              Needs review
-            </span>
+  Needs review
+</span>
 
-            <strong>
-              {
-                adaptiveElapsedBlocks
-                  .length
-              }
-            </strong>
+<strong>
+  {
+    adaptiveUnresolvedReviewCount
+  }
+</strong>
           </article>
 
 
@@ -2302,7 +2687,7 @@ const dayIsAvailable =
         </div>
       </>
     )}
-    {adaptiveElapsedBlocks.length > 0 && (
+    {adaptiveReviewCandidates.length > 0 && (
   <div className="planner-adaptive__review">
     <div className="planner-adaptive__subheading">
       <div>
@@ -2317,15 +2702,14 @@ const dayIsAvailable =
 
       <span>
         {
-          adaptiveElapsedBlocks
-            .length
+          adaptiveUnresolvedReviewCount
         }
       </span>
     </div>
 
 
     <div className="planner-adaptive__review-list">
-      {adaptiveElapsedBlocks.map(
+      {adaptiveReviewCandidates.map(
         (block) => {
           const task =
             adaptiveTaskMap.get(
@@ -2335,12 +2719,20 @@ const dayIsAvailable =
             );
 
 
+          const decision =
+            adaptiveBlockDecisions[
+              String(
+                block.id
+              )
+            ];
+
+
           return (
             <article
               key={block.id}
               className="planner-adaptive__review-item"
             >
-              <div>
+              <div className="planner-adaptive__review-main">
                 <strong>
                   {
                     task?.title ||
@@ -2364,9 +2756,65 @@ const dayIsAvailable =
               </div>
 
 
-              <span className="planner-adaptive__review-badge">
-                Needs confirmation
-              </span>
+              <div
+                className="planner-adaptive__decision-group"
+                aria-label={`Review ${task?.title || "study block"}`}
+              >
+                <button
+                  type="button"
+                  className="planner-adaptive__decision"
+                  aria-pressed={
+                    decision ===
+                    RESCHEDULE_BLOCK_CONFIRMATION
+                      .COMPLETED
+                  }
+                  onClick={
+                    () =>
+                      handleAdaptiveBlockDecision(
+                        block.id,
+
+                        RESCHEDULE_BLOCK_CONFIRMATION
+                          .COMPLETED
+                      )
+                  }
+                >
+                  <CheckCircle2
+                    size={16}
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+
+                  Completed
+                </button>
+
+
+                <button
+                  type="button"
+                  className="planner-adaptive__decision"
+                  aria-pressed={
+                    decision ===
+                    RESCHEDULE_BLOCK_CONFIRMATION
+                      .STILL_NEEDS_WORK
+                  }
+                  onClick={
+                    () =>
+                      handleAdaptiveBlockDecision(
+                        block.id,
+
+                        RESCHEDULE_BLOCK_CONFIRMATION
+                          .STILL_NEEDS_WORK
+                      )
+                  }
+                >
+                  <RefreshCw
+                    size={16}
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+
+                  Still needs work
+                </button>
+              </div>
             </article>
           );
         }
@@ -2375,20 +2823,30 @@ const dayIsAvailable =
 
 
     <div className="planner-adaptive__review-note">
-      <CircleAlert
-        size={19}
-        strokeWidth={1.8}
-        aria-hidden="true"
-      />
+      {adaptiveReviewResolved ? (
+        <CheckCircle2
+          size={19}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+      ) : (
+        <CircleAlert
+          size={19}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+      )}
+
 
       <p>
-        These blocks have only been marked
-        for review. CozyCram has not assumed
-        that you completed or missed them.
+        {adaptiveReviewResolved
+          ? "Every earlier block has been reviewed. You can now evaluate the final adaptive preview."
+          : "Choose what happened for each earlier block. CozyCram will not assume that an elapsed block was completed or missed."}
       </p>
     </div>
   </div>
 )}
+
 {adaptiveReplacementBlocks.length > 0 && (
   <div className="planner-adaptive__preview">
     <div className="planner-adaptive__subheading">
@@ -2474,6 +2932,84 @@ const dayIsAvailable =
     </div>
   </div>
 )}
+
+{adaptiveExplanation && (
+  <details className="planner-adaptive__why">
+    <summary>
+      <CircleAlert
+        size={18}
+        strokeWidth={1.8}
+        aria-hidden="true"
+      />
+
+      <span>
+        {
+          adaptiveExplanation
+            .title
+        }
+      </span>
+    </summary>
+
+
+    <div className="planner-adaptive__why-content">
+      <p>
+        {
+          adaptiveExplanation
+            .message
+        }
+      </p>
+
+
+      <div className="planner-adaptive__why-list">
+        {
+          adaptiveExplanation
+            .reasons
+            .map(
+              (reason) => (
+                <article
+                  key={
+                    reason.code
+                  }
+                >
+                  <div>
+                    <strong>
+                      {
+                        reason.title
+                      }
+                    </strong>
+
+                    <p>
+                      {
+                        reason.message
+                      }
+                    </p>
+                  </div>
+
+
+                  {reason.minutes ? (
+                    <span>
+                      {
+                        formatDuration(
+                          reason.minutes
+                        )
+                      }
+                    </span>
+                  ) : reason.count > 0 ? (
+                    <span>
+                      {
+                        reason.count
+                      }
+                    </span>
+                  ) : null}
+                </article>
+              )
+            )
+        }
+      </div>
+    </div>
+  </details>
+)}
+
 {adaptiveUnscheduledMinutes > 0 && (
   <div className="planner-adaptive__unplaced">
     <CircleAlert
@@ -2501,10 +3037,49 @@ const dayIsAvailable =
     </div>
   </div>
 )}
-   <p className="planner-adaptive__preview-note">
-  Preview only — your current generated
-  schedule has not been replaced.
-</p>
+   <div className="planner-adaptive__apply">
+  <div>
+    <strong>
+      {adaptiveUnresolvedReviewCount > 0
+        ? "Review earlier blocks before applying."
+        : !adaptiveResult?.changed
+          ? "No schedule changes need to be applied."
+          : "Your reviewed update is ready to apply."}
+    </strong>
+
+    <p>
+      {adaptiveUnresolvedReviewCount > 0
+        ? `${adaptiveUnresolvedReviewCount} ${
+            adaptiveUnresolvedReviewCount === 1
+              ? "block still needs"
+              : "blocks still need"
+          } your confirmation.`
+        : !adaptiveResult?.changed
+          ? "Your current generated plan can remain as it is."
+          : "Applying replaces the current in-memory generated schedule with this reviewed adaptive plan."}
+    </p>
+  </div>
+
+
+  <button
+    type="button"
+    className="planner-adaptive__apply-button"
+    disabled={
+      !canApplyAdaptivePlan
+    }
+    onClick={
+      handleApplyAdaptivePlan
+    }
+  >
+    <CheckCircle2
+      size={17}
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
+
+    Apply updated plan
+  </button>
+</div>
   </section>
 )}
 

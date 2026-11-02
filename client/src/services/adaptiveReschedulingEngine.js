@@ -34,11 +34,22 @@ export const RESCHEDULE_BLOCK_STATE = {
   CONFIRMED_COMPLETE:
     "confirmed_complete",
 
+  CONFIRMED_REMAINING:
+    "confirmed_remaining",
+
   ELAPSED_UNCONFIRMED:
     "elapsed_unconfirmed",
 
   INVALIDATED:
     "invalidated",
+};
+
+export const RESCHEDULE_BLOCK_CONFIRMATION = {
+  COMPLETED:
+    "completed",
+
+  STILL_NEEDS_WORK:
+    "still_needs_work",
 };
 
 export const RESCHEDULE_DRIFT_REASON = {
@@ -1961,6 +1972,488 @@ const getBlockDriftReasons = ({
   ];
 };
 
+const getAdaptiveDriftReasonExplanation = (
+  reason
+) => {
+  if (
+    reason ===
+    RESCHEDULE_DRIFT_REASON
+      .INVALID_BLOCK
+  ) {
+    return {
+      title:
+        "Old block could not be reused",
+
+      message:
+        "The original block contained schedule data that CozyCram could not safely keep.",
+    };
+  }
+
+
+  if (
+    reason ===
+    RESCHEDULE_DRIFT_REASON
+      .TASK_REMOVED
+  ) {
+    return {
+      title:
+        "Task was removed",
+
+      message:
+        "The task connected to an old study block no longer exists in the current study data.",
+    };
+  }
+
+
+  if (
+    reason ===
+    RESCHEDULE_DRIFT_REASON
+      .TASK_COMPLETED
+  ) {
+    return {
+      title:
+        "Task is already completed",
+
+      message:
+        "The current task is completed, so its old planned block no longer needs future study time.",
+    };
+  }
+
+
+  if (
+    reason ===
+    RESCHEDULE_DRIFT_REASON
+      .TASK_NOT_OPEN
+  ) {
+    return {
+      title:
+        "Task is no longer open",
+
+      message:
+        "The task is no longer active work, so CozyCram removed its old planning block.",
+    };
+  }
+
+
+  if (
+    reason ===
+    RESCHEDULE_DRIFT_REASON
+      .SUBJECT_REMOVED
+  ) {
+    return {
+      title:
+        "Subject was removed",
+
+      message:
+        "The subject connected to the old study block no longer exists.",
+    };
+  }
+
+
+  if (
+    reason ===
+    RESCHEDULE_DRIFT_REASON
+      .SUBJECT_CHANGED
+  ) {
+    return {
+      title:
+        "Task subject changed",
+
+      message:
+        "The task now belongs to a different subject than the original study block.",
+    };
+  }
+
+
+  if (
+    reason ===
+    RESCHEDULE_DRIFT_REASON
+      .INVALID_DEADLINE
+  ) {
+    return {
+      title:
+        "Deadline needs attention",
+
+      message:
+        "The current deadline cannot be interpreted safely, so CozyCram did not trust the old block.",
+    };
+  }
+
+
+  if (
+    reason ===
+    RESCHEDULE_DRIFT_REASON
+      .BLOCK_AFTER_DEADLINE
+  ) {
+    return {
+      title:
+        "Deadline moved earlier",
+
+      message:
+        "The old study block now falls after the task's current deadline.",
+    };
+  }
+
+
+  if (
+    reason ===
+    RESCHEDULE_DRIFT_REASON
+      .NO_AVAILABILITY
+  ) {
+    return {
+      title:
+        "Study availability was removed",
+
+      message:
+        "The old study block no longer has a saved availability window on that weekday.",
+    };
+  }
+
+
+  if (
+    reason ===
+    RESCHEDULE_DRIFT_REASON
+      .AVAILABILITY_DISABLED
+  ) {
+    return {
+      title:
+        "Study time was turned off",
+
+      message:
+        "The weekday containing the old study block is no longer enabled for study.",
+    };
+  }
+
+
+  if (
+    reason ===
+    RESCHEDULE_DRIFT_REASON
+      .INVALID_AVAILABILITY
+  ) {
+    return {
+      title:
+        "Availability needs attention",
+
+      message:
+        "The current availability window cannot be interpreted safely.",
+    };
+  }
+
+
+  if (
+    reason ===
+    RESCHEDULE_DRIFT_REASON
+      .OUTSIDE_AVAILABILITY
+  ) {
+    return {
+      title:
+        "Study window changed",
+
+      message:
+        "The old block no longer fits inside the current saved availability window.",
+    };
+  }
+
+
+  if (
+    reason ===
+    RESCHEDULE_DRIFT_REASON
+      .SCHEDULING_INPUT_CHANGED
+  ) {
+    return {
+      title:
+        "Task planning inputs changed",
+
+      message:
+        "A scheduling input such as deadline, priority, or estimated workload changed after the original plan was generated.",
+    };
+  }
+
+
+  return {
+    title:
+      "Planning input changed",
+
+    message:
+      "The original plan no longer matches the current scheduling inputs.",
+  };
+};
+
+export const createAdaptiveChangeExplanation = ({
+  result,
+}) => {
+  if (
+    !result ||
+    typeof result !==
+      "object"
+  ) {
+    return null;
+  }
+
+
+  const reasons = [];
+
+
+  const confirmedRemainingBlocks =
+    Array.isArray(
+      result
+        .confirmedRemainingBlocks
+    )
+      ? result
+          .confirmedRemainingBlocks
+      : [];
+
+
+  const completedBlocks =
+    Array.isArray(
+      result.completedBlocks
+    )
+      ? result.completedBlocks
+      : [];
+
+
+  const keptBlocks =
+    Array.isArray(
+      result.keptBlocks
+    )
+      ? result.keptBlocks
+      : [];
+
+
+  const replacementBlocks =
+    Array.isArray(
+      result.replacementBlocks
+    )
+      ? result.replacementBlocks
+      : [];
+
+
+  const removedBlocks =
+    Array.isArray(
+      result.removedBlocks
+    )
+      ? result.removedBlocks
+      : [];
+
+
+  const unscheduled =
+    Array.isArray(
+      result.unscheduled
+    )
+      ? result.unscheduled
+      : [];
+
+
+  if (
+    confirmedRemainingBlocks
+      .length > 0
+  ) {
+    reasons.push({
+      code:
+        "confirmed_remaining",
+
+      title:
+        "Earlier work still needs study time",
+
+      message:
+        "You confirmed that one or more elapsed blocks still need work, so those minutes became eligible for a new future slot.",
+
+      count:
+        confirmedRemainingBlocks
+          .length,
+    });
+  }
+
+
+  if (
+    completedBlocks.length >
+    0
+  ) {
+    reasons.push({
+      code:
+        "confirmed_complete",
+
+      title:
+        "Confirmed study was protected",
+
+      message:
+        "Blocks you confirmed as completed are counted as completed work and are not scheduled again.",
+
+      count:
+        completedBlocks.length,
+    });
+  }
+
+
+  const driftReasonCounts =
+    new Map();
+
+
+  for (
+    const block
+    of removedBlocks
+  ) {
+    const driftReasons =
+      Array.isArray(
+        block.driftReasons
+      )
+        ? block.driftReasons
+        : [];
+
+
+    for (
+      const reason
+      of driftReasons
+    ) {
+      driftReasonCounts.set(
+        reason,
+        (
+          driftReasonCounts.get(
+            reason
+          ) || 0
+        ) + 1
+      );
+    }
+  }
+
+
+  for (
+    const [
+      reason,
+      count,
+    ]
+    of driftReasonCounts
+  ) {
+    const copy =
+      getAdaptiveDriftReasonExplanation(
+        reason
+      );
+
+
+    reasons.push({
+      code:
+        reason,
+
+      title:
+        copy.title,
+
+      message:
+        copy.message,
+
+      count,
+    });
+  }
+
+
+  if (
+    keptBlocks.length > 0
+  ) {
+    reasons.push({
+      code:
+        "future_blocks_preserved",
+
+      title:
+        "Valid future blocks were kept",
+
+      message:
+        "Future blocks that still match your current tasks, deadlines and availability were left in place.",
+
+      count:
+        keptBlocks.length,
+    });
+  }
+
+
+  if (
+    replacementBlocks.length >
+    0
+  ) {
+    reasons.push({
+      code:
+        "replacement_blocks_created",
+
+      title:
+        "Safe replacement time was found",
+
+      message:
+        "Known remaining work was placed only inside future eligible study windows while preserving existing valid blocks and breaks.",
+
+      count:
+        replacementBlocks
+          .length,
+    });
+  }
+
+
+  const unscheduledMinutes =
+    unscheduled.reduce(
+      (
+        total,
+        item
+      ) =>
+        total +
+        (
+          Number(
+            item.remainingMinutes
+          ) || 0
+        ),
+      0
+    );
+
+
+  if (
+    unscheduledMinutes > 0
+  ) {
+    reasons.push({
+      code:
+        "work_remains_unscheduled",
+
+      title:
+        "Some work still has no safe slot",
+
+      message:
+        "CozyCram kept unplaced work visible instead of forcing it into unavailable, elapsed, or deadline-ineligible time.",
+
+      count:
+        unscheduled.length,
+
+      minutes:
+        unscheduledMinutes,
+    });
+  }
+
+
+  if (
+    reasons.length === 0
+  ) {
+    reasons.push({
+      code:
+        "no_change_needed",
+
+      title:
+        "No planning change was needed",
+
+      message:
+        "The current remaining plan still fits the known work and saved study constraints.",
+
+      count: 0,
+    });
+  }
+
+
+  return {
+    title:
+      result.changed
+        ? "Why this preview changed"
+        : "Why no schedule change was needed",
+
+    message:
+      "CozyCram used your explicit block confirmations, current planning inputs, remaining work and safe future study time.",
+
+    reasons,
+  };
+};
+
 const validateConfirmedCompletionTiming = ({
   block,
   asOfDateTime,
@@ -2016,12 +2509,70 @@ const validateConfirmedCompletionTiming = ({
   };
 };
 
+const validateConfirmedRemainingTiming = ({
+  block,
+  asOfDateTime,
+}) => {
+  const blockEndTimestamp =
+    getScheduleBlockTimestamp({
+      block,
+
+      time:
+        block.endTime,
+
+      asOfDateTime,
+    });
+
+
+  const asOfTimestamp =
+    Date.parse(
+      asOfDateTime
+    );
+
+
+  if (
+    blockEndTimestamp ===
+      null ||
+    Number.isNaN(
+      asOfTimestamp
+    )
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Adaptive rescheduling could not compare the remaining-work confirmation safely.",
+    };
+  }
+
+
+  if (
+    blockEndTimestamp >
+      asOfTimestamp
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "A future study block cannot be confirmed as elapsed work that still needs rescheduling.",
+    };
+  }
+
+
+  return {
+    valid: true,
+
+    error: "",
+  };
+};
+
 const classifyAdaptiveScheduleBlock = ({
   block,
   snapshot,
   taskMap,
   subjectMap,
   completedBlockIdSet,
+  remainingBlockIdSet,
 }) => {
   const blockId =
     String(
@@ -2080,6 +2631,58 @@ const classifyAdaptiveScheduleBlock = ({
       },
     };
   }
+
+  const isConfirmedRemaining =
+  remainingBlockIdSet.has(
+    blockId
+  );
+
+
+if (
+  isConfirmedRemaining
+) {
+  const timingValidation =
+    validateConfirmedRemainingTiming({
+      block,
+
+      asOfDateTime:
+        snapshot
+          .asOfDateTime,
+    });
+
+
+  if (
+    !timingValidation.valid
+  ) {
+    return {
+      valid: false,
+
+      error:
+        timingValidation.error,
+
+      block: null,
+    };
+  }
+
+
+  return {
+    valid: true,
+
+    error: "",
+
+    block: {
+      ...cloneValue(
+        block
+      ),
+
+      adaptiveState:
+        RESCHEDULE_BLOCK_STATE
+          .CONFIRMED_REMAINING,
+
+      driftReasons: [],
+    },
+  };
+}
 
   const driftReasons =
     getBlockDriftReasons({
@@ -2300,6 +2903,16 @@ export const analyzeAdaptiveScheduleState = (
       )
     );
 
+  const remainingBlockIdSet =
+  new Set(
+    (
+      snapshot
+        .confirmedRemainingBlockIds ||
+      []
+    ).map(
+      String
+    )
+  );
 
   const classifiedBlocks =
     [];
@@ -2320,6 +2933,8 @@ export const analyzeAdaptiveScheduleState = (
         subjectMap,
 
         completedBlockIdSet,
+
+        remainingBlockIdSet,
       });
 
 
@@ -2351,6 +2966,13 @@ export const analyzeAdaptiveScheduleState = (
           .CONFIRMED_COMPLETE
     );
 
+const confirmedRemainingBlocks =
+  classifiedBlocks.filter(
+    (block) =>
+      block.adaptiveState ===
+      RESCHEDULE_BLOCK_STATE
+        .CONFIRMED_REMAINING
+  );
 
   const futurePlannedBlocks =
     classifiedBlocks.filter(
@@ -2377,7 +2999,6 @@ export const analyzeAdaptiveScheduleState = (
         RESCHEDULE_BLOCK_STATE
           .INVALIDATED
     );
-
 
   const triggers =
     [];
@@ -2451,6 +3072,10 @@ export const analyzeAdaptiveScheduleState = (
           confirmedCompletedBlocks
             .length,
 
+        confirmedRemainingBlocks:
+  confirmedRemainingBlocks
+    .length,
+
         futurePlannedBlocks:
           futurePlannedBlocks
             .length,
@@ -2505,6 +3130,26 @@ const cloneValue = (
 
 
   return value;
+};
+
+const stripAdaptiveBlockMetadata = (
+  block
+) => {
+  const copied =
+    cloneValue(
+      block
+    );
+
+
+  delete copied
+    .adaptiveState;
+
+
+  delete copied
+    .driftReasons;
+
+
+  return copied;
 };
 
 const getCurrentTaskEstimate = (
@@ -2993,6 +3638,15 @@ const calculateTaskRemainingWork = ({
           .CONFIRMED_COMPLETE,
     });
 
+   const confirmedRemainingBlocks =
+    getBlocksWithAdaptiveState({
+      blocks:
+        taskBlocks,
+
+      state:
+        RESCHEDULE_BLOCK_STATE
+          .CONFIRMED_REMAINING,
+    });
 
   const futureBlocks =
     getBlocksWithAdaptiveState({
@@ -3032,6 +3686,10 @@ const calculateTaskRemainingWork = ({
       confirmedBlocks
     );
 
+ const observedConfirmedRemainingMinutes =
+  sumBlockMinutes(
+    confirmedRemainingBlocks
+  );
 
   const observedFutureMinutes =
     sumBlockMinutes(
@@ -3179,6 +3837,9 @@ const calculateTaskRemainingWork = ({
 
         originalUnscheduled:
           originalUnscheduledMinutes,
+
+        confirmedRemaining:
+  observedConfirmedRemainingMinutes,
       },
 
       excessMinutes: {
@@ -3228,6 +3889,12 @@ const calculateTaskRemainingWork = ({
             (block) =>
               block.id
           ),
+
+        confirmedRemaining:
+  confirmedRemainingBlocks.map(
+    (block) =>
+      block.id
+  ),
       },
 
       accounting: {
@@ -3726,11 +4393,89 @@ const normalizeCompletedBlockIds = ({
   };
 };
 
+const normalizeRemainingBlockIds = ({
+  remainingBlockIds,
+  blocks,
+}) => {
+  if (
+    !Array.isArray(
+      remainingBlockIds
+    )
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Confirmed remaining block IDs must be provided as an array.",
+
+      blockIds: [],
+    };
+  }
+
+
+  const knownBlockIds =
+    new Set(
+      blocks.map(
+        (block) =>
+          String(
+            block.id
+          )
+      )
+    );
+
+
+  const normalized =
+    [
+      ...new Set(
+        remainingBlockIds.map(
+          (blockId) =>
+            String(
+              blockId
+            )
+        )
+      ),
+    ];
+
+
+  const unknownBlockId =
+    normalized.find(
+      (blockId) =>
+        !knownBlockIds.has(
+          blockId
+        )
+    );
+
+
+  if (
+    unknownBlockId
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Adaptive rescheduling received a remaining-work block ID that does not belong to the current schedule.",
+
+      blockIds: [],
+    };
+  }
+
+
+  return {
+    valid: true,
+
+    error: "",
+
+    blockIds:
+      normalized,
+  };
+};
+
 export const createAdaptiveReschedulingSnapshot = ({
   studyData,
   scheduleResult,
   asOfDateTime,
   completedBlockIds = [],
+  remainingBlockIds = [],
 }) => {
   if (
     !studyData ||
@@ -3792,6 +4537,60 @@ export const createAdaptiveReschedulingSnapshot = ({
         scheduleResult.blocks,
     });
 
+   const remainingBlockValidation =
+  normalizeRemainingBlockIds({
+    remainingBlockIds,
+
+    blocks:
+      scheduleResult.blocks,
+  });
+
+
+if (
+  !remainingBlockValidation
+    .valid
+) {
+  return {
+    valid: false,
+
+    error:
+      remainingBlockValidation
+        .error,
+
+    snapshot: null,
+  };
+}
+
+const remainingBlockIdSet =
+  new Set(
+    remainingBlockValidation
+      .blockIds
+  );
+
+
+const conflictingBlockId =
+  completedBlockValidation
+    .blockIds
+    .find(
+      (blockId) =>
+        remainingBlockIdSet.has(
+          blockId
+        )
+    );
+
+
+if (
+  conflictingBlockId
+) {
+  return {
+    valid: false,
+
+    error:
+      "A study block cannot be confirmed both completed and still needing work.",
+
+    snapshot: null,
+  };
+}
 
   if (
     !completedBlockValidation
@@ -3911,9 +4710,14 @@ export const createAdaptiveReschedulingSnapshot = ({
         ...completedBlockValidation
           .blockIds,
       ],
+
+
+    confirmedRemainingBlockIds:
+  [
+    ...remainingBlockValidation
+      .blockIds,
+  ],
   };
-
-
   return {
     valid: true,
 
@@ -3957,6 +4761,8 @@ export const createEmptyAdaptiveReschedulingResult = (
 
   completedBlocks: [],
 
+  confirmedRemainingBlocks: [],
+
   elapsedUnconfirmedBlocks: [],
 
   removedBlocks: [],
@@ -3989,6 +4795,8 @@ export const createEmptyAdaptiveReschedulingResult = (
     removedBlocks: 0,
 
     replacementBlocks: 0,
+
+    confirmedRemainingBlocks: 0,
   },
 });
 export const generateAdaptiveReplacementSchedule = ({
@@ -4041,6 +4849,15 @@ export const generateAdaptiveReplacementSchedule = ({
           .CONFIRMED_COMPLETE,
     });
 
+const confirmedRemainingBlocks =
+  getBlocksWithAdaptiveState({
+    blocks:
+      analysis.blocks,
+
+    state:
+      RESCHEDULE_BLOCK_STATE
+        .CONFIRMED_REMAINING,
+  });
 
   const elapsedUnconfirmedBlocks =
     getBlocksWithAdaptiveState({
@@ -4053,7 +4870,7 @@ export const generateAdaptiveReplacementSchedule = ({
     });
 
 
-  const removedBlocks =
+  const invalidatedBlocks =
     getBlocksWithAdaptiveState({
       blocks:
         analysis.blocks,
@@ -4063,6 +4880,11 @@ export const generateAdaptiveReplacementSchedule = ({
           .INVALIDATED,
     });
 
+    const removedBlocks =
+  [
+    ...invalidatedBlocks,
+    ...confirmedRemainingBlocks,
+  ];
 
   const schedulingSnapshotResult =
     createReplacementSchedulingSnapshot({
@@ -4434,6 +5256,11 @@ export const generateAdaptiveReplacementSchedule = ({
           completedBlocks
         ),
 
+        confirmedRemainingBlocks:
+  cloneValue(
+    confirmedRemainingBlocks
+  ),
+
       elapsedUnconfirmedBlocks:
         cloneValue(
           elapsedUnconfirmedBlocks
@@ -4480,6 +5307,10 @@ export const generateAdaptiveReplacementSchedule = ({
 
         readyToRescheduleMinutes,
 
+        confirmedRemainingBlocks:
+  confirmedRemainingBlocks
+    .length,
+
         reviewHeldMinutes:
           Number(
             remainingWork
@@ -4500,6 +5331,303 @@ export const generateAdaptiveReplacementSchedule = ({
         replacementScheduler:
           cloneValue(
             replacementSummary
+          ),
+      },
+    },
+  };
+};
+export const createAppliedAdaptiveSchedule = ({
+  snapshot,
+  remainingWork,
+  result,
+}) => {
+  if (
+    !snapshot ||
+    snapshot.version !==
+      ADAPTIVE_RESCHEDULE_VERSION
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Applying an adaptive plan requires a valid adaptive snapshot.",
+
+      schedule: null,
+    };
+  }
+
+
+  if (
+    !remainingWork ||
+    remainingWork.version !==
+      ADAPTIVE_RESCHEDULE_VERSION
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Applying an adaptive plan requires valid remaining-work accounting.",
+
+      schedule: null,
+    };
+  }
+
+
+  if (
+    !result ||
+    result.version !==
+      ADAPTIVE_RESCHEDULE_VERSION
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Applying an adaptive plan requires a valid adaptive replacement result.",
+
+      schedule: null,
+    };
+  }
+
+
+  if (
+    result.scheduleVersion !==
+      snapshot.scheduleVersion ||
+    result.weekStart !==
+      snapshot.weekStart ||
+    result.weekEnd !==
+      snapshot.weekEnd ||
+    result.asOfDateTime !==
+      snapshot.asOfDateTime
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "The adaptive replacement result does not belong to this reviewed schedule.",
+
+      schedule: null,
+    };
+  }
+
+
+  const elapsedUnconfirmedBlocks =
+    Array.isArray(
+      result
+        .elapsedUnconfirmedBlocks
+    )
+      ? result
+          .elapsedUnconfirmedBlocks
+      : [];
+
+
+  if (
+    elapsedUnconfirmedBlocks
+      .length > 0 ||
+    result.status ===
+      ADAPTIVE_RESCHEDULE_STATUS
+        .NEEDS_REVIEW
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Every elapsed study block must be reviewed before the updated plan can be applied.",
+
+      schedule: null,
+    };
+  }
+
+
+  const completedBlocks =
+    Array.isArray(
+      result.completedBlocks
+    )
+      ? result.completedBlocks
+      : [];
+
+
+  const keptBlocks =
+    Array.isArray(
+      result.keptBlocks
+    )
+      ? result.keptBlocks
+      : [];
+
+
+  const replacementBlocks =
+    Array.isArray(
+      result.replacementBlocks
+    )
+      ? result.replacementBlocks
+      : [];
+
+
+  const blocks =
+    [
+      ...completedBlocks,
+      ...keptBlocks,
+      ...replacementBlocks,
+    ]
+      .map(
+        stripAdaptiveBlockMetadata
+      )
+      .sort(
+        (
+          first,
+          second
+        ) => {
+          if (
+            first.date !==
+            second.date
+          ) {
+            return String(
+              first.date
+            ).localeCompare(
+              String(
+                second.date
+              )
+            );
+          }
+
+
+          return String(
+            first.startTime
+          ).localeCompare(
+            String(
+              second.startTime
+            )
+          );
+        }
+      );
+
+
+  const blockIds =
+    blocks.map(
+      (block) =>
+        String(
+          block.id
+        )
+    );
+
+
+  if (
+    new Set(
+      blockIds
+    ).size !==
+      blockIds.length
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "The updated plan contains duplicate study block IDs.",
+
+      schedule: null,
+    };
+  }
+
+
+  const tasks =
+    Array.isArray(
+      snapshot
+        ?.studyData
+        ?.tasks
+    )
+      ? snapshot
+          .studyData
+          .tasks
+          .filter(
+            (task) =>
+              task.status ===
+              "todo"
+          )
+      : [];
+
+
+  const unscheduled =
+    cloneValue(
+      Array.isArray(
+        result.unscheduled
+      )
+        ? result.unscheduled
+        : []
+    );
+
+
+  const accounting =
+    validateScheduleAccounting({
+      tasks,
+
+      blocks,
+
+      unscheduled,
+    });
+
+
+  if (
+    !accounting.valid
+  ) {
+    return {
+      valid: false,
+
+      error:
+        accounting.error,
+
+      schedule: null,
+    };
+  }
+
+
+  const summary =
+    createScheduleSummary({
+      tasks,
+
+      blocks,
+
+      unscheduled,
+    });
+
+
+  return {
+    valid: true,
+
+    error: "",
+
+    schedule: {
+      version:
+        SCHEDULE_VERSION,
+
+      weekStart:
+        snapshot.weekStart,
+
+      weekEnd:
+        snapshot.weekEnd,
+
+      generatedAt:
+        snapshot.asOfDateTime,
+
+      blocks,
+
+      unscheduled,
+
+      summary,
+
+      adaptive: {
+        version:
+          ADAPTIVE_RESCHEDULE_VERSION,
+
+        appliedAt:
+          snapshot.asOfDateTime,
+
+        trigger:
+          result.trigger,
+
+        confirmedCompletedBlockIds:
+          completedBlocks.map(
+            (block) =>
+              String(
+                block.id
+              )
           ),
       },
     },
