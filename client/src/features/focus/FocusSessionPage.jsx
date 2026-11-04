@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 
 import {
+  useEffect,
   useState,
 } from "react";
 
@@ -21,7 +22,10 @@ import {
 } from "../../services/studyDataService.js";
 
 import {
+  calculateFocusTimerRemainingSeconds,
+  createFocusTimerRuntime,
   FOCUS_DURATION_OPTION,
+  FOCUS_TIMER_STATUS,
   validateFocusSessionHandoff,
 } from "../../services/focusSessionService.js";
 
@@ -233,10 +237,55 @@ const formatDurationOption = (
   return "Focus";
 };
 
+const formatTimerClock = (
+  value
+) => {
+  const safeSeconds =
+    Math.max(
+      0,
+      Math.floor(
+        Number(
+          value
+        ) || 0
+      )
+    );
 
-function FocusSessionPage() {
-  const location =
-    useLocation();
+
+  const minutes =
+    Math.floor(
+      safeSeconds / 60
+    );
+
+
+  const seconds =
+    safeSeconds % 60;
+
+
+  return `${String(
+    minutes
+  ).padStart(
+    2,
+    "0"
+  )}:${String(
+    seconds
+  ).padStart(
+    2,
+    "0"
+  )}`;
+};
+
+const createFocusRuntimeOnStart = (
+  durationMinutes
+) => {
+  return createFocusTimerRuntime({
+    durationMinutes,
+    startedAtMs: Date.now(),
+  });
+};
+
+function FocusSessionPageContent({
+  location,
+}) {
 
 
   const [
@@ -268,6 +317,207 @@ function FocusSessionPage() {
         })
       : null;
 
+const sessionDraft =
+  handoffResult?.valid
+    ? handoffResult
+        .sessionDraft
+    : null;
+
+    const [
+  timerStatus,
+  setTimerStatus,
+] = useState(
+  FOCUS_TIMER_STATUS.READY
+);
+
+
+const [
+  timerRuntime,
+  setTimerRuntime,
+] = useState(
+  null
+);
+
+
+const [
+  remainingSeconds,
+  setRemainingSeconds,
+] = useState(
+  () =>
+    sessionDraft
+      ? sessionDraft
+          .durationMinutes *
+        60
+      : 0
+);
+
+
+const [
+  timerError,
+  setTimerError,
+] = useState(
+  ""
+);
+
+
+useEffect(
+  () => {
+    if (
+      timerStatus !==
+        FOCUS_TIMER_STATUS
+          .RUNNING ||
+      !timerRuntime
+    ) {
+      return undefined;
+    }
+
+
+    const syncRemainingTime =
+      () => {
+        const nextRemainingSeconds =
+          calculateFocusTimerRemainingSeconds({
+            endAtMs:
+              timerRuntime
+                .endAtMs,
+
+            currentTimeMs:
+              Date.now(),
+          });
+
+
+        if (
+          nextRemainingSeconds ===
+          null
+        ) {
+          setTimerError(
+            "CozyCram could not safely calculate the remaining Focus time."
+          );
+
+
+          setTimerStatus(
+            FOCUS_TIMER_STATUS
+              .READY
+          );
+
+
+          setTimerRuntime(
+            null
+          );
+
+
+          return;
+        }
+
+
+        setRemainingSeconds(
+          nextRemainingSeconds
+        );
+
+
+        if (
+          nextRemainingSeconds ===
+          0
+        ) {
+          setTimerStatus(
+            FOCUS_TIMER_STATUS
+              .COMPLETE
+          );
+
+
+          setTimerRuntime(
+            null
+          );
+        }
+      };
+
+
+    syncRemainingTime();
+
+
+    const intervalId =
+      window.setInterval(
+        syncRemainingTime,
+        250
+      );
+
+
+    return () => {
+      window.clearInterval(
+        intervalId
+      );
+    };
+  },
+  [
+    timerStatus,
+    timerRuntime,
+  ]
+);
+
+const handleStartFocus =
+  () => {
+    if (
+      !sessionDraft ||
+      timerStatus !==
+        FOCUS_TIMER_STATUS
+          .READY
+    ) {
+      return;
+    }
+
+
+    setTimerError(
+      ""
+    );
+
+
+    const runtimeResult =
+  createFocusRuntimeOnStart(
+    sessionDraft.durationMinutes
+  );
+
+
+    if (
+      !runtimeResult.valid
+    ) {
+      setTimerError(
+        runtimeResult.error
+      );
+
+      return;
+    }
+
+
+    setRemainingSeconds(
+      runtimeResult
+        .runtime
+        .durationSeconds
+    );
+
+
+    setTimerRuntime(
+      runtimeResult.runtime
+    );
+
+
+    setTimerStatus(
+      FOCUS_TIMER_STATUS
+        .RUNNING
+    );
+  };
+
+  const timerIsReady =
+  timerStatus ===
+  FOCUS_TIMER_STATUS.READY;
+
+
+const timerIsRunning =
+  timerStatus ===
+  FOCUS_TIMER_STATUS.RUNNING;
+
+
+const timerIsComplete =
+  timerStatus ===
+  FOCUS_TIMER_STATUS.COMPLETE;
 
   if (
     loadError
@@ -343,11 +593,6 @@ function FocusSessionPage() {
       </main>
     );
   }
-
-
-  const sessionDraft =
-    handoffResult
-      .sessionDraft;
 
 
   return (
@@ -556,7 +801,191 @@ function FocusSessionPage() {
           </p>
         </div>
       </section>
-    </main>
+      <section
+  className="focus-session-timer"
+  aria-labelledby="focus-session-timer-title"
+>
+  <div className="focus-session-timer__heading">
+    <div>
+      <p>
+        ACTIVE FOCUS
+      </p>
+
+      <h2 id="focus-session-timer-title">
+        {timerIsReady &&
+          "Start when you're ready"}
+
+        {timerIsRunning &&
+          "Focus in progress"}
+
+        {timerIsComplete &&
+          "Focus timer complete"}
+      </h2>
+    </div>
+
+
+    <span className="focus-session-timer__status">
+      {timerIsReady &&
+        "Ready"}
+
+      {timerIsRunning &&
+        "Focusing"}
+
+      {timerIsComplete &&
+        "Complete"}
+    </span>
+  </div>
+
+
+  <div
+    className="focus-session-timer__clock"
+    aria-live="off"
+  >
+    <span>
+      {
+        sessionDraft
+          .subject
+          .name
+      }
+    </span>
+
+    <strong>
+      {
+        formatTimerClock(
+          remainingSeconds
+        )
+      }
+    </strong>
+
+    <p>
+      {
+        sessionDraft
+          .task
+          .title
+      }
+    </p>
+  </div>
+
+
+  {timerError && (
+    <div
+      className="focus-session-timer__error"
+      role="alert"
+    >
+      <CircleAlert
+        size={19}
+        strokeWidth={1.8}
+        aria-hidden="true"
+      />
+
+      <p>
+        {timerError}
+      </p>
+    </div>
+  )}
+
+
+  {timerIsReady && (
+    <div className="focus-session-timer__action">
+      <div>
+        <strong>
+          The timer starts only when
+          you choose Start focus.
+        </strong>
+
+        <p>
+          No study time has been
+          recorded yet.
+        </p>
+      </div>
+
+
+      <button
+        type="button"
+        onClick={
+          handleStartFocus
+        }
+      >
+        <Timer
+          size={18}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        Start focus
+      </button>
+    </div>
+  )}
+
+
+  {timerIsRunning && (
+    <div
+      className="focus-session-timer__notice"
+      role="status"
+    >
+      <Timer
+        size={20}
+        strokeWidth={1.8}
+        aria-hidden="true"
+      />
+
+      <div>
+        <strong>
+          Session in progress
+        </strong>
+
+        <p>
+          CozyCram calculates the
+          countdown from the real
+          session end time, so switching
+          browser tabs will not pause
+          the clock.
+        </p>
+      </div>
+    </div>
+  )}
+
+
+  {timerIsComplete && (
+    <div
+      className="focus-session-timer__notice"
+      role="status"
+      aria-live="polite"
+    >
+      <ShieldCheck
+        size={22}
+        strokeWidth={1.8}
+        aria-hidden="true"
+      />
+
+      <div>
+        <strong>
+          Timer finished
+        </strong>
+
+        <p>
+          The countdown reached zero.
+          CozyCram has not recorded task
+          progress or completion yet.
+        </p>
+      </div>
+    </div>
+  )}
+</section>
+        </main>
+  );
+}
+
+
+function FocusSessionPage() {
+  const location =
+    useLocation();
+
+  return (
+    <FocusSessionPageContent
+      key={location.key}
+      location={location}
+    />
   );
 }
 

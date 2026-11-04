@@ -6,6 +6,16 @@ import {
 export const FOCUS_SESSION_VERSION =
   1;
 
+export const FOCUS_TIMER_STATUS = {
+  READY:
+    "ready",
+
+  RUNNING:
+    "running",
+
+  COMPLETE:
+    "complete",
+};
 
 export const FOCUS_DURATION_OPTION = {
   QUICK:
@@ -335,4 +345,131 @@ export const validateFocusSessionHandoff = ({
       durationMinutes,
     },
   };
+};
+
+export const createFocusTimerRuntime = ({
+  durationMinutes,
+  startedAtMs,
+}) => {
+  const safeDurationMinutes =
+    Number(
+      durationMinutes
+    );
+
+
+  const safeStartedAtMs =
+    Number(
+      startedAtMs
+    );
+
+
+  if (
+    !Number.isInteger(
+      safeDurationMinutes
+    ) ||
+    safeDurationMinutes <
+      MIN_SCHEDULE_BLOCK_MINUTES
+  ) {
+    return {
+      valid: false,
+
+      error:
+        `Focus duration must be a whole number of at least ${MIN_SCHEDULE_BLOCK_MINUTES} minutes.`,
+
+      runtime: null,
+    };
+  }
+
+
+  if (
+    !Number.isFinite(
+      safeStartedAtMs
+    ) ||
+    safeStartedAtMs < 0
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Focus timer requires a valid explicit start time.",
+
+      runtime: null,
+    };
+  }
+
+
+  const durationSeconds =
+    safeDurationMinutes *
+    60;
+
+
+  const endAtMs =
+    safeStartedAtMs +
+    durationSeconds *
+      1000;
+
+
+  return {
+    valid: true,
+
+    error: "",
+
+    runtime: {
+      durationMinutes:
+        safeDurationMinutes,
+
+      durationSeconds,
+
+      startedAtMs:
+        safeStartedAtMs,
+
+      endAtMs,
+    },
+  };
+};
+
+export const calculateFocusTimerRemainingSeconds = ({
+  endAtMs,
+  currentTimeMs,
+}) => {
+  const safeEndAtMs =
+    Number(
+      endAtMs
+    );
+
+
+  const safeCurrentTimeMs =
+    Number(
+      currentTimeMs
+    );
+
+
+  if (
+    !Number.isFinite(
+      safeEndAtMs
+    ) ||
+    !Number.isFinite(
+      safeCurrentTimeMs
+    )
+  ) {
+    return null;
+  }
+
+
+  const remainingMilliseconds =
+    safeEndAtMs -
+    safeCurrentTimeMs;
+
+
+  if (
+    remainingMilliseconds <= 0
+  ) {
+    return 0;
+  }
+
+
+  return Math.ceil(
+    remainingMilliseconds /
+      1000
+  );
 };
