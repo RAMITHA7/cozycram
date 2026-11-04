@@ -1,6 +1,8 @@
 import {
   ArrowLeft,
+  ArrowRight,
   BookOpen,
+  CheckCircle2,
   CircleAlert,
   Clock3,
   Pause,
@@ -22,15 +24,19 @@ import {
 
 import {
   loadStudyData,
+  saveTasks,
 } from "../../services/studyDataService.js";
 
 import {
   calculateFocusTimerRemainingSeconds,
   createFocusSessionEndSnapshot,
+  createFocusTaskResultSummary,
+  createFocusTaskUpdate,
   createFocusTimerResumeRuntime,
   createFocusTimerRuntime,
   FOCUS_DURATION_OPTION,
   FOCUS_SESSION_END_REASON,
+  FOCUS_TASK_RESULT_ACTION,
   FOCUS_TIMER_STATUS,
   validateFocusSessionHandoff,
 } from "../../services/focusSessionService.js";
@@ -380,6 +386,37 @@ const [
   false
 );
 
+const [
+  taskResultAction,
+  setTaskResultAction,
+] = useState(
+  null
+);
+
+
+const [
+  taskResultError,
+  setTaskResultError,
+] = useState(
+  ""
+);
+
+
+const [
+  taskResultNotice,
+  setTaskResultNotice,
+] = useState(
+  ""
+);
+
+
+const [
+  taskResultApplied,
+  setTaskResultApplied,
+] = useState(
+  false
+);
+
 useEffect(
   () => {
     if (
@@ -557,6 +594,44 @@ const handleStartFocus =
 
 
 setEndConfirmationOpen(
+  false
+);
+
+setTaskResultAction(
+  null
+);
+
+
+setTaskResultError(
+  ""
+);
+
+
+setTaskResultNotice(
+  ""
+);
+
+
+setTaskResultApplied(
+  false
+);
+
+setTaskResultAction(
+  null
+);
+
+
+setTaskResultError(
+  ""
+);
+
+
+setTaskResultNotice(
+  ""
+);
+
+
+setTaskResultApplied(
   false
 );
 
@@ -972,6 +1047,223 @@ const timerIsEnded =
 const timerIsActive =
   timerIsRunning ||
   timerIsPaused;
+
+  const sessionHasEnded =
+  Boolean(
+    sessionEndSnapshot
+  ) &&
+  (
+    timerIsComplete ||
+    timerIsEnded
+  );
+
+
+const taskResultSummaryResult =
+  sessionHasEnded &&
+  sessionDraft
+    ? createFocusTaskResultSummary({
+        task:
+          sessionDraft.task,
+
+        sessionEndSnapshot,
+      })
+    : null;
+
+
+const taskResultSummary =
+  taskResultSummaryResult
+    ?.valid
+    ? taskResultSummaryResult
+        .summary
+    : null;
+
+    const handleConfirmTaskResult =
+  () => {
+    if (
+      !sessionEndSnapshot ||
+      !sessionDraft ||
+      !taskResultAction ||
+      taskResultApplied
+    ) {
+      return;
+    }
+
+
+    setTaskResultError(
+      ""
+    );
+
+
+    setTaskResultNotice(
+      ""
+    );
+
+
+    const latestDataResult =
+      loadStudyData();
+
+
+    if (
+      latestDataResult.error ||
+      !latestDataResult.data
+    ) {
+      setTaskResultError(
+        latestDataResult.error ||
+        "CozyCram could not reload the current task safely."
+      );
+
+      return;
+    }
+
+
+    const latestTasks =
+      Array.isArray(
+        latestDataResult
+          .data
+          .tasks
+      )
+        ? latestDataResult
+            .data
+            .tasks
+        : [];
+
+
+    const currentTask =
+      latestTasks.find(
+        (task) =>
+          String(
+            task.id
+          ) ===
+          String(
+            sessionDraft
+              .task
+              .id
+          )
+      );
+
+
+    if (
+      !currentTask
+    ) {
+      setTaskResultError(
+        "The linked task no longer exists, so this Focus result cannot update it."
+      );
+
+      return;
+    }
+
+
+    const updateResult =
+      createFocusTaskUpdate({
+        task:
+          currentTask,
+
+        sessionEndSnapshot,
+
+        action:
+          taskResultAction,
+
+        completedAtIso:
+          taskResultAction ===
+          FOCUS_TASK_RESULT_ACTION
+            .MARK_COMPLETE
+            ? new Date()
+                .toISOString()
+            : null,
+      });
+
+
+    if (
+      !updateResult.valid
+    ) {
+      setTaskResultError(
+        updateResult.error
+      );
+
+      return;
+    }
+
+
+    if (
+      !updateResult
+        .update
+        .changed
+    ) {
+      setTaskResultApplied(
+        true
+      );
+
+
+      setTaskResultNotice(
+        "Task kept open. No task data was changed."
+      );
+
+
+      return;
+    }
+
+
+    const nextTasks =
+      latestTasks.map(
+        (task) =>
+          String(
+            task.id
+          ) ===
+          String(
+            currentTask.id
+          )
+            ? updateResult
+                .update
+                .nextTask
+            : task
+      );
+
+
+    const saveResult =
+      saveTasks(
+        nextTasks
+      );
+
+
+    if (
+      !saveResult.success
+    ) {
+      setTaskResultError(
+        saveResult.error
+      );
+
+      return;
+    }
+
+
+    setTaskResultApplied(
+      true
+    );
+
+
+    if (
+      taskResultAction ===
+      FOCUS_TASK_RESULT_ACTION
+        .REDUCE_ESTIMATE
+    ) {
+      setTaskResultNotice(
+        `Remaining estimate updated to ${formatDuration(
+          updateResult
+            .update
+            .nextTask
+            .estimatedMinutes
+        )}.`
+      );
+
+
+      return;
+    }
+
+
+    setTaskResultNotice(
+      `${currentTask.title} was marked complete.`
+    );
+  };
 
   if (
     loadError
@@ -1633,6 +1925,322 @@ const timerIsActive =
   </div>
 )}
 </section>
+{sessionHasEnded &&
+  taskResultSummary && (
+  <section
+    className="focus-session-result"
+    aria-labelledby="focus-session-result-title"
+  >
+    <div className="focus-session-result__heading">
+      <div>
+        <p>
+          SESSION RESULT
+        </p>
+
+        <h2 id="focus-session-result-title">
+          Link this Focus time to your task
+        </h2>
+
+        <span>
+          CozyCram will only change the
+          linked task after you choose an
+          outcome and confirm it.
+        </span>
+      </div>
+    </div>
+
+
+    <div
+      className="focus-session-result__summary"
+      aria-label="Focus session result"
+    >
+      <article>
+        <span>
+          Focused time
+        </span>
+
+        <strong>
+          {
+            formatTimerClock(
+              taskResultSummary
+                .elapsedSeconds
+            )
+          }
+        </strong>
+
+        <small>
+          Exact timer result
+        </small>
+      </article>
+
+
+      <article>
+        <span>
+          Whole focus minutes
+        </span>
+
+        <strong>
+          {
+            taskResultSummary
+              .focusedWholeMinutes
+          }
+          {" min"}
+        </strong>
+
+        <small>
+          Eligible for estimate reduction
+        </small>
+      </article>
+
+
+      <article>
+        <span>
+          Current task estimate
+        </span>
+
+        <strong>
+          {
+            formatDuration(
+              taskResultSummary
+                .currentEstimatedMinutes
+            )
+          }
+        </strong>
+
+        <small>
+          Current session snapshot
+        </small>
+      </article>
+    </div>
+
+
+    <div
+      className="focus-session-result__choices"
+      role="group"
+      aria-label="Choose how this Focus session affects the task"
+    >
+      <button
+        type="button"
+        className="focus-session-result__choice"
+        aria-pressed={
+          taskResultAction ===
+          FOCUS_TASK_RESULT_ACTION
+            .KEEP_OPEN
+        }
+        disabled={
+          taskResultApplied
+        }
+        onClick={
+          () =>
+            setTaskResultAction(
+              FOCUS_TASK_RESULT_ACTION
+                .KEEP_OPEN
+            )
+        }
+      >
+        <BookOpen
+          size={20}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        <div>
+          <strong>
+            Keep task open
+          </strong>
+
+          <span>
+            Leave the task exactly as it is.
+          </span>
+        </div>
+      </button>
+
+
+      <button
+        type="button"
+        className="focus-session-result__choice"
+        aria-pressed={
+          taskResultAction ===
+          FOCUS_TASK_RESULT_ACTION
+            .REDUCE_ESTIMATE
+        }
+        disabled={
+          taskResultApplied ||
+          !taskResultSummary
+            .canReduceEstimate
+        }
+        onClick={
+          () =>
+            setTaskResultAction(
+              FOCUS_TASK_RESULT_ACTION
+                .REDUCE_ESTIMATE
+            )
+        }
+      >
+        <Clock3
+          size={20}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        <div>
+          <strong>
+            Update remaining estimate
+          </strong>
+
+          <span>
+            {taskResultSummary
+              .canReduceEstimate
+              ? `${formatDuration(
+                  taskResultSummary
+                    .currentEstimatedMinutes
+                )} → ${formatDuration(
+                  taskResultSummary
+                    .estimatedMinutesAfterFocus
+                )}`
+              : taskResultSummary
+                  .reduceEstimateMessage}
+          </span>
+        </div>
+      </button>
+
+
+      <button
+        type="button"
+        className="focus-session-result__choice"
+        aria-pressed={
+          taskResultAction ===
+          FOCUS_TASK_RESULT_ACTION
+            .MARK_COMPLETE
+        }
+        disabled={
+          taskResultApplied
+        }
+        onClick={
+          () =>
+            setTaskResultAction(
+              FOCUS_TASK_RESULT_ACTION
+                .MARK_COMPLETE
+            )
+        }
+      >
+        <CheckCircle2
+          size={20}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        <div>
+          <strong>
+            Mark task complete
+          </strong>
+
+          <span>
+            Explicitly complete the linked task.
+          </span>
+        </div>
+      </button>
+    </div>
+
+
+    {taskResultError && (
+      <div
+        className="focus-session-result__message"
+        role="alert"
+      >
+        <CircleAlert
+          size={19}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        <p>
+          {taskResultError}
+        </p>
+      </div>
+    )}
+
+
+    {taskResultNotice && (
+      <div
+        className="focus-session-result__message"
+        role="status"
+        aria-live="polite"
+      >
+        <CheckCircle2
+          size={19}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        <p>
+          {taskResultNotice}
+        </p>
+      </div>
+    )}
+
+
+    <div className="focus-session-result__footer">
+      <div>
+        <strong>
+          {taskResultApplied
+            ? "Task outcome confirmed."
+            : taskResultAction
+              ? "Review your choice, then confirm it."
+              : "Choose what this Focus session means for the task."}
+        </strong>
+
+        <p>
+          The session itself is not stored
+          as a separate history record in V1.
+        </p>
+      </div>
+
+
+      {!taskResultApplied ? (
+        <button
+          type="button"
+          className="focus-session-result__confirm"
+          disabled={
+            !taskResultAction
+          }
+          onClick={
+            handleConfirmTaskResult
+          }
+        >
+          <CheckCircle2
+            size={17}
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
+
+          Confirm task outcome
+        </button>
+      ) : (
+        <div className="focus-session-result__next">
+          <Link
+            to="/focus"
+          >
+            New Focus session
+          </Link>
+
+
+          <Link
+            to={`/planner/tasks/${sessionDraft.task.id}`}
+          >
+            View task
+
+            <ArrowRight
+              size={16}
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
+          </Link>
+        </div>
+      )}
+    </div>
+  </section>
+)}
         </main>
   );
 }

@@ -31,6 +31,17 @@ export const FOCUS_SESSION_END_REASON = {
     "user_ended",
 };
 
+export const FOCUS_TASK_RESULT_ACTION = {
+  KEEP_OPEN:
+    "keep_open",
+
+  REDUCE_ESTIMATE:
+    "reduce_estimate",
+
+  MARK_COMPLETE:
+    "mark_complete",
+};
+
 export const FOCUS_DURATION_OPTION = {
   QUICK:
     "quick",
@@ -683,3 +694,445 @@ export const createFocusSessionEndSnapshot = ({
     },
   };
 };
+
+const validateFocusSessionEndSnapshot = (
+  sessionEndSnapshot
+) => {
+  if (
+    !sessionEndSnapshot ||
+    typeof sessionEndSnapshot !==
+      "object"
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Focus task linkage requires a completed session result.",
+    };
+  }
+
+
+  const plannedDurationSeconds =
+    Number(
+      sessionEndSnapshot
+        .plannedDurationSeconds
+    );
+
+
+  const remainingSeconds =
+    Number(
+      sessionEndSnapshot
+        .remainingSeconds
+    );
+
+
+  const elapsedSeconds =
+    Number(
+      sessionEndSnapshot
+        .elapsedSeconds
+    );
+
+
+  if (
+    !Number.isInteger(
+      plannedDurationSeconds
+    ) ||
+    plannedDurationSeconds <= 0
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Focus session result contains an invalid planned duration.",
+    };
+  }
+
+
+  if (
+    !Number.isInteger(
+      remainingSeconds
+    ) ||
+    remainingSeconds < 0 ||
+    remainingSeconds >
+      plannedDurationSeconds
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Focus session result contains invalid remaining time.",
+    };
+  }
+
+
+  if (
+    !Number.isInteger(
+      elapsedSeconds
+    ) ||
+    elapsedSeconds < 0 ||
+    elapsedSeconds >
+      plannedDurationSeconds
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Focus session result contains invalid elapsed time.",
+    };
+  }
+
+
+  if (
+    elapsedSeconds +
+      remainingSeconds !==
+    plannedDurationSeconds
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Focus session result accounting is inconsistent.",
+    };
+  }
+
+
+  return {
+    valid: true,
+
+    error: "",
+  };
+};
+
+export const createFocusTaskResultSummary = ({
+  task,
+  sessionEndSnapshot,
+}) => {
+  if (
+    !task ||
+    typeof task !==
+      "object"
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Focus task result requires a valid linked task.",
+
+      summary: null,
+    };
+  }
+
+
+  const snapshotValidation =
+    validateFocusSessionEndSnapshot(
+      sessionEndSnapshot
+    );
+
+
+  if (
+    !snapshotValidation.valid
+  ) {
+    return {
+      valid: false,
+
+      error:
+        snapshotValidation.error,
+
+      summary: null,
+    };
+  }
+
+
+  const currentEstimatedMinutes =
+    Number(
+      task.estimatedMinutes
+    );
+
+
+  if (
+    !Number.isFinite(
+      currentEstimatedMinutes
+    ) ||
+    currentEstimatedMinutes <
+      MIN_SCHEDULE_BLOCK_MINUTES
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "The linked task no longer has a valid remaining-work estimate.",
+
+      summary: null,
+    };
+  }
+
+
+  const focusedWholeMinutes =
+    Math.floor(
+      sessionEndSnapshot
+        .elapsedSeconds /
+      60
+    );
+
+
+  const estimatedMinutesAfterFocus =
+    currentEstimatedMinutes -
+    focusedWholeMinutes;
+
+
+  const canReduceEstimate =
+    focusedWholeMinutes > 0 &&
+    estimatedMinutesAfterFocus >=
+      MIN_SCHEDULE_BLOCK_MINUTES &&
+    estimatedMinutesAfterFocus <
+      currentEstimatedMinutes;
+
+
+  let reduceEstimateMessage =
+    "";
+
+
+  if (
+    focusedWholeMinutes <= 0
+  ) {
+    reduceEstimateMessage =
+      "Complete at least one whole Focus minute before reducing the task estimate.";
+  } else if (
+    estimatedMinutesAfterFocus <
+      MIN_SCHEDULE_BLOCK_MINUTES
+  ) {
+    reduceEstimateMessage =
+      "Applying this Focus time would leave the task below CozyCram's 15-minute minimum. Keep it open or mark it complete instead.";
+  }
+
+
+  return {
+    valid: true,
+
+    error: "",
+
+    summary: {
+      taskId:
+        task.id,
+
+      elapsedSeconds:
+        sessionEndSnapshot
+          .elapsedSeconds,
+
+      focusedWholeMinutes,
+
+      currentEstimatedMinutes,
+
+      estimatedMinutesAfterFocus:
+        Math.max(
+          0,
+          estimatedMinutesAfterFocus
+        ),
+
+      canReduceEstimate,
+
+      reduceEstimateMessage,
+    },
+  };
+};
+
+export const createFocusTaskUpdate = ({
+  task,
+  sessionEndSnapshot,
+  action,
+  completedAtIso = null,
+}) => {
+  if (
+    !task ||
+    typeof task !==
+      "object"
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Focus task update requires a valid current task.",
+
+      update: null,
+    };
+  }
+
+
+  if (
+    task.status !==
+    "todo"
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "The linked task is no longer open, so this Focus result cannot update it.",
+
+      update: null,
+    };
+  }
+
+
+  if (
+    !Object.values(
+      FOCUS_TASK_RESULT_ACTION
+    ).includes(
+      action
+    )
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Choose a valid task outcome for this Focus session.",
+
+      update: null,
+    };
+  }
+
+
+  const summaryResult =
+    createFocusTaskResultSummary({
+      task,
+      sessionEndSnapshot,
+    });
+
+
+  if (
+    !summaryResult.valid
+  ) {
+    return {
+      valid: false,
+
+      error:
+        summaryResult.error,
+
+      update: null,
+    };
+  }
+
+
+  const summary =
+    summaryResult.summary;
+
+
+  if (
+    action ===
+    FOCUS_TASK_RESULT_ACTION
+      .KEEP_OPEN
+  ) {
+    return {
+      valid: true,
+
+      error: "",
+
+      update: {
+        action,
+
+        changed: false,
+
+        nextTask: {
+          ...task,
+        },
+
+        summary,
+      },
+    };
+  }
+
+
+  if (
+    action ===
+    FOCUS_TASK_RESULT_ACTION
+      .REDUCE_ESTIMATE
+  ) {
+    if (
+      !summary.canReduceEstimate
+    ) {
+      return {
+        valid: false,
+
+        error:
+          summary
+            .reduceEstimateMessage ||
+          "This Focus result cannot safely reduce the remaining task estimate.",
+
+        update: null,
+      };
+    }
+
+
+    return {
+      valid: true,
+
+      error: "",
+
+      update: {
+        action,
+
+        changed: true,
+
+        nextTask: {
+          ...task,
+
+          estimatedMinutes:
+            summary
+              .estimatedMinutesAfterFocus,
+        },
+
+        summary,
+      },
+    };
+  }
+
+
+  const normalizedCompletedAt =
+    String(
+      completedAtIso ?? ""
+    ).trim();
+
+
+  if (
+    !normalizedCompletedAt ||
+    Number.isNaN(
+      Date.parse(
+        normalizedCompletedAt
+      )
+    )
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Completing the task requires a valid explicit completion time.",
+
+      update: null,
+    };
+  }
+
+
+  return {
+    valid: true,
+
+    error: "",
+
+    update: {
+      action,
+
+      changed: true,
+
+      nextTask: {
+        ...task,
+
+        status:
+          "done",
+
+        completedAt:
+          normalizedCompletedAt,
+      },
+
+      summary,
+    },
+  };
+};
+
