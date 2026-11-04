@@ -352,14 +352,7 @@ strong {
 .focus-task-card {
   min-width: 0;
 
-  display: flex;
-  flex-direction: column;
-
-  gap:
-    var(--space-4);
-
-  padding:
-    var(--space-4);
+  overflow: hidden;
 
   border:
     1px solid
@@ -371,15 +364,11 @@ strong {
   background:
     var(--color-surface-1);
 
-  color:
-    inherit;
-
-  text-decoration: none;
-
   transition:
     border-color 160ms ease,
     transform 160ms ease,
-    background 160ms ease;
+    background 160ms ease,
+    box-shadow 160ms ease;
 }
 
 
@@ -392,13 +381,51 @@ strong {
 }
 
 
-.focus-task-card:focus-visible {
+.focus-task-card--selected {
+  border-color:
+    var(--color-brand);
+
+  box-shadow:
+    inset 0 0 0 1px
+    var(--color-brand);
+}
+
+
+.focus-task-card__select {
+  width: 100%;
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-4);
+
+  padding:
+    var(--space-4);
+
+  border: 0;
+
+  background:
+    transparent;
+
+  color:
+    inherit;
+
+  font: inherit;
+
+  text-align: left;
+
+  cursor: pointer;
+}
+
+
+.focus-task-card__select:focus-visible {
   outline:
     2px solid
     var(--color-brand);
 
   outline-offset:
-    3px;
+    -4px;
 }
 
 
@@ -434,6 +461,55 @@ strong {
     var(--color-brand);
 }
 
+.focus-task-card__selected,
+.focus-task-card__choose {
+  display: inline-flex;
+  align-items: center;
+
+  gap:
+    var(--space-1);
+
+  min-height: 28px;
+
+  padding:
+    0
+    var(--space-2);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    999px;
+
+  font-size:
+    var(--text-caption);
+
+  font-weight:
+    var(--font-weight-semibold);
+}
+
+
+.focus-task-card__selected {
+  border-color:
+    var(--color-brand);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--color-brand) 10%,
+      transparent
+    );
+
+  color:
+    var(--color-brand);
+}
+
+
+.focus-task-card__choose {
+  color:
+    var(--color-text-muted);
+}
 
 .focus-task-card__content {
   min-width: 0;
@@ -523,7 +599,447 @@ span {
     var(--text-body-sm);
 }
 
+.focus-task-card__details {
+  min-height: 44px;
 
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap:
+    var(--space-2);
+
+  padding:
+    0
+    var(--space-4);
+
+  border-top:
+    1px solid
+    var(--color-divider);
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-body-sm);
+
+  font-weight:
+    var(--font-weight-semibold);
+
+  text-decoration: none;
+}
+
+
+.focus-task-card__details:focus-visible {
+  outline:
+    2px solid
+    var(--color-brand);
+
+  outline-offset:
+    -4px;
+}
+
+/* =========================================================
+   SESSION DURATION
+   ========================================================= */
+
+.focus-duration {
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-4);
+
+  padding:
+    var(--space-5);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-lg);
+
+  background:
+    var(--color-surface-1);
+}
+
+
+.focus-duration__options {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(0, 1fr)
+    );
+
+  gap:
+    var(--space-3);
+}
+
+
+.focus-duration__option {
+  min-width: 0;
+  min-height: 84px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+
+  gap:
+    var(--space-1);
+
+  padding:
+    var(--space-3);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+
+  color:
+    var(--color-text-primary);
+
+  font: inherit;
+
+  text-align: left;
+
+  cursor: pointer;
+}
+
+
+.focus-duration__option
+span {
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+}
+
+
+.focus-duration__option
+strong {
+  font-size:
+    var(--text-heading-sm);
+}
+
+
+.focus-duration__option:hover {
+  border-color:
+    var(--color-brand);
+}
+
+
+.focus-duration__option[aria-pressed="true"] {
+  border-color:
+    var(--color-brand);
+
+  box-shadow:
+    inset 0 0 0 1px
+    var(--color-brand);
+}
+
+
+.focus-duration__option:focus-visible {
+  outline:
+    2px solid
+    var(--color-brand);
+
+  outline-offset:
+    3px;
+}
+
+
+.focus-duration__custom {
+  max-width: 420px;
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-2);
+}
+
+
+.focus-duration__custom
+label {
+  font-size:
+    var(--text-body-sm);
+
+  font-weight:
+    var(--font-weight-semibold);
+}
+
+
+.focus-duration__custom
+input {
+  min-height: 44px;
+
+  width: 100%;
+
+  padding:
+    0
+    var(--space-3);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-1);
+
+  color:
+    var(--color-text-primary);
+
+  font: inherit;
+}
+
+
+.focus-duration__custom
+input:focus-visible {
+  outline:
+    2px solid
+    var(--color-brand);
+
+  outline-offset:
+    2px;
+}
+
+
+.focus-duration__custom
+input[aria-invalid="true"] {
+  border-color:
+    var(--color-brand);
+}
+
+
+.focus-duration__custom-help {
+  margin: 0;
+
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
+
+
+.focus-duration__custom-help--error {
+  color:
+    var(--color-brand);
+}
+
+/* =========================================================
+   SESSION SETUP SUMMARY
+   ========================================================= */
+
+.focus-session-setup {
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-4);
+
+  padding:
+    var(--space-5);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-lg);
+
+  background:
+    var(--color-surface-1);
+}
+
+
+.focus-session-setup__summary {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+
+  gap:
+    var(--space-3);
+}
+
+
+.focus-session-setup__summary
+article {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-1);
+
+  padding:
+    var(--space-3);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+}
+
+
+.focus-session-setup__summary
+span {
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
+
+
+.focus-session-setup__summary
+strong {
+  overflow-wrap:
+    anywhere;
+
+  font-size:
+    var(--text-heading-sm);
+}
+
+
+.focus-session-setup__summary
+small {
+  overflow-wrap:
+    anywhere;
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+}
+
+
+.focus-session-setup__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap:
+    var(--space-4);
+
+  padding-top:
+    var(--space-4);
+
+  border-top:
+    1px solid
+    var(--color-divider);
+}
+
+
+.focus-session-setup__footer
+> div {
+  min-width: 0;
+}
+
+
+.focus-session-setup__footer
+p {
+  margin-top:
+    var(--space-1);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+}
+
+
+.focus-session-setup__continue {
+  min-height: 44px;
+
+  flex: 0 0 auto;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  gap:
+    var(--space-2);
+
+  padding:
+    0
+    var(--space-4);
+
+  border:
+    1px solid
+    var(--color-brand);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-brand);
+
+  color:
+    var(--color-on-brand);
+
+  font: inherit;
+
+  font-size:
+    var(--text-body-sm);
+
+  font-weight:
+    var(--font-weight-semibold);
+
+  text-decoration: none;
+
+  cursor: pointer;
+}
+
+
+.focus-session-setup__continue:disabled {
+  border-color:
+    var(--color-border-subtle);
+
+  background:
+    var(--color-surface-2);
+
+  color:
+    var(--color-text-muted);
+
+  cursor:
+    not-allowed;
+}
+
+
+.focus-session-setup__continue:not(:disabled):focus-visible {
+  outline:
+    2px solid
+    var(--color-brand);
+
+  outline-offset:
+    3px;
+}
 /* =========================================================
    EMPTY / LOAD STATES
    ========================================================= */
@@ -654,6 +1170,15 @@ span {
     grid-template-columns:
       1fr;
   }
+
+  .focus-duration__options {
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+}
+
 }
 
 
@@ -696,6 +1221,34 @@ span {
   .focus-empty__link {
     width: 100%;
   }
+
+  .focus-duration,
+.focus-session-setup {
+  padding:
+    var(--space-4);
+}
+
+
+.focus-duration__options,
+.focus-session-setup__summary {
+  grid-template-columns:
+    1fr;
+}
+
+
+.focus-session-setup__footer {
+  align-items:
+    stretch;
+
+  flex-direction:
+    column;
+}
+
+
+.focus-session-setup__continue {
+  width: 100%;
+}
+
 }
 
 
@@ -709,9 +1262,11 @@ span {
 
 
   .focus-preference,
-  .focus-task-card,
-  .focus-empty,
-  .focus-state {
+.focus-duration,
+.focus-session-setup,
+.focus-task-card,
+.focus-empty,
+.focus-state {
     padding:
       var(--space-3);
   }

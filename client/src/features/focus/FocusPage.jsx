@@ -1,6 +1,7 @@
 import {
   ArrowRight,
   BookOpen,
+  CheckCircle2,
   CircleAlert,
   Clock3,
   Coffee,
@@ -21,11 +22,37 @@ import {
 } from "../../services/studyDataService.js";
 
 import {
+  MIN_SCHEDULE_BLOCK_MINUTES,
   resolveFocusPlan,
 } from "../../services/schedulingEngine.js";
 
 import "./focus.css";
 
+const FOCUS_DURATION_OPTIONS = [
+  {
+    id: "quick",
+    label: "Quick",
+    minutes: 25,
+  },
+
+  {
+    id: "classic",
+    label: "Classic",
+    minutes: 50,
+  },
+
+  {
+    id: "deep",
+    label: "Deep",
+    minutes: 90,
+  },
+
+  {
+    id: "custom",
+    label: "Custom",
+    minutes: null,
+  },
+];
 
 const DATE_KEY_PATTERN =
   /^\d{4}-\d{2}-\d{2}$/;
@@ -304,6 +331,115 @@ function FocusPage() {
       ? focusResult.focusPlan
       : null;
 
+   const [
+  selectedTaskId,
+  setSelectedTaskId,
+] = useState(
+  null
+);
+
+
+const [
+  selectedDurationOption,
+  setSelectedDurationOption,
+] = useState(
+  () => {
+    const savedPreset =
+      focusPlan?.preset;
+
+
+    return FOCUS_DURATION_OPTIONS
+      .some(
+        (option) =>
+          option.id ===
+          savedPreset
+      )
+      ? savedPreset
+      : null;
+  }
+);
+
+
+const [
+  customFocusMinutes,
+  setCustomFocusMinutes,
+] = useState(
+  () =>
+    focusPlan?.preset ===
+    "custom"
+      ? String(
+          focusPlan.focusMinutes
+        )
+      : ""
+);
+
+
+const selectedTask =
+  openTasks.find(
+    (task) =>
+      String(
+        task.id
+      ) ===
+      String(
+        selectedTaskId
+      )
+  ) ||
+  null;
+
+
+const selectedDurationPreset =
+  FOCUS_DURATION_OPTIONS
+    .find(
+      (option) =>
+        option.id ===
+        selectedDurationOption
+    ) ||
+  null;
+
+
+const numericCustomFocusMinutes =
+  Number(
+    customFocusMinutes
+  );
+
+
+const customDurationIsValid =
+  Number.isInteger(
+    numericCustomFocusMinutes
+  ) &&
+  numericCustomFocusMinutes >=
+    MIN_SCHEDULE_BLOCK_MINUTES;
+
+
+const selectedDurationMinutes =
+  selectedDurationOption ===
+  "custom"
+    ? (
+        customDurationIsValid
+          ? numericCustomFocusMinutes
+          : null
+      )
+    : (
+        selectedDurationPreset
+          ?.minutes ??
+        null
+      );
+
+
+const customDurationError =
+  selectedDurationOption ===
+    "custom" &&
+  customFocusMinutes !== "" &&
+  !customDurationIsValid
+    ? `Enter a whole number of at least ${MIN_SCHEDULE_BLOCK_MINUTES} minutes.`
+    : "";
+
+
+const canContinueToFocus =
+  Boolean(
+    selectedTask &&
+    selectedDurationMinutes
+  );
 
   if (
     loadError
@@ -621,118 +757,422 @@ function FocusPage() {
         </div>
 
 
-        {openTasks.length > 0 ? (
-          <div className="focus-task-grid">
-            {openTasks.map(
-              (task) => (
-                <Link
-                  key={task.id}
-                  to={`/planner/tasks/${task.id}`}
-                  className="focus-task-card"
+       {openTasks.length > 0 ? (
+  <div className="focus-task-grid">
+    {openTasks.map(
+      (task) => {
+        const isSelected =
+          String(
+            selectedTaskId
+          ) ===
+          String(
+            task.id
+          );
+
+
+        return (
+          <article
+            key={task.id}
+            className={`focus-task-card${
+              isSelected
+                ? " focus-task-card--selected"
+                : ""
+            }`}
+          >
+            <button
+              type="button"
+              className="focus-task-card__select"
+              aria-pressed={
+                isSelected
+              }
+              onClick={
+                () =>
+                  setSelectedTaskId(
+                    task.id
+                  )
+              }
+            >
+              <div className="focus-task-card__top">
+                <div
+                  className="focus-task-card__icon"
+                  aria-hidden="true"
                 >
-                  <div className="focus-task-card__top">
-                    <div
-                      className="focus-task-card__icon"
-                      aria-hidden="true"
-                    >
-                      <BookOpen
-                        size={20}
-                        strokeWidth={1.8}
-                      />
-                    </div>
+                  <BookOpen
+                    size={20}
+                    strokeWidth={1.8}
+                  />
+                </div>
 
 
-                    <ArrowRight
-                      size={18}
+                {isSelected ? (
+                  <span className="focus-task-card__selected">
+                    <CheckCircle2
+                      size={16}
+                      strokeWidth={1.8}
                       aria-hidden="true"
                     />
-                  </div>
+
+                    Selected
+                  </span>
+                ) : (
+                  <span className="focus-task-card__choose">
+                    Choose
+                  </span>
+                )}
+              </div>
 
 
-                  <div className="focus-task-card__content">
-                    <strong>
-                      {task.title}
-                    </strong>
+              <div className="focus-task-card__content">
+                <strong>
+                  {task.title}
+                </strong>
 
-                    <span>
-                      {
-                        subjectMap.get(
-                          String(
-                            task.subjectId
-                          )
-                        ) ||
-                        "Unknown subject"
-                      }
-                    </span>
-                  </div>
-
-
-                  <div className="focus-task-card__meta">
-                    <span>
-                      <Clock3
-                        size={15}
-                        strokeWidth={1.8}
-                        aria-hidden="true"
-                      />
-
-                      {
-                        formatDuration(
-                          task.estimatedMinutes
-                        )
-                      }
-                    </span>
-
-                    <span>
-                      {
-                        formatPriority(
-                          task.priority
-                        )
-                      }
-                    </span>
-                  </div>
-
-
-                  <p className="focus-task-card__deadline">
-                    {
-                      formatDueDate(
-                        task.dueDate
+                <span>
+                  {
+                    subjectMap.get(
+                      String(
+                        task.subjectId
                       )
-                    }
-                  </p>
-                </Link>
-              )
-            )}
-          </div>
-        ) : (
-          <div className="focus-empty">
-            <ListTodo
-              size={26}
-              strokeWidth={1.8}
-              aria-hidden="true"
-            />
+                    ) ||
+                    "Unknown subject"
+                  }
+                </span>
+              </div>
 
-            <div>
-              <h3>
-                No open tasks right now.
-              </h3>
 
-              <p>
-                Add an open task before
-                preparing a task-linked
-                Focus session.
+              <div className="focus-task-card__meta">
+                <span>
+                  <Clock3
+                    size={15}
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+
+                  {
+                    formatDuration(
+                      task.estimatedMinutes
+                    )
+                  }
+                </span>
+
+                <span>
+                  {
+                    formatPriority(
+                      task.priority
+                    )
+                  }
+                </span>
+              </div>
+
+
+              <p className="focus-task-card__deadline">
+                {
+                  formatDueDate(
+                    task.dueDate
+                  )
+                }
               </p>
-            </div>
+            </button>
 
 
             <Link
-              to="/planner/tasks"
-              className="focus-empty__link"
+              to={`/planner/tasks/${task.id}`}
+              className="focus-task-card__details"
             >
-              Manage tasks
+              View task
+
+              <ArrowRight
+                size={16}
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
             </Link>
-          </div>
-        )}
+          </article>
+        );
+      }
+    )}
+  </div>
+) : (
+  <div className="focus-empty">
+    <ListTodo
+      size={26}
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
+
+    <div>
+      <h3>
+        No open tasks right now.
+      </h3>
+
+      <p>
+        Add an open task before
+        preparing a task-linked
+        Focus session.
+      </p>
+    </div>
+
+
+    <Link
+      to="/planner/tasks"
+      className="focus-empty__link"
+    >
+      Manage tasks
+    </Link>
+  </div>
+)}
+
       </section>
+      <section
+  className="focus-duration"
+  aria-labelledby="focus-duration-title"
+>
+  <div className="focus-section-heading">
+    <div>
+      <p>
+        SESSION LENGTH
+      </p>
+
+      <h2 id="focus-duration-title">
+        Choose your focus time
+      </h2>
+
+      <span>
+        Use a standard session or choose
+        your own valid focus duration.
+      </span>
+    </div>
+  </div>
+
+
+  <div
+    className="focus-duration__options"
+    role="group"
+    aria-label="Focus duration"
+  >
+    {FOCUS_DURATION_OPTIONS.map(
+      (option) => {
+        const isSelected =
+          selectedDurationOption ===
+          option.id;
+
+
+        return (
+          <button
+            key={option.id}
+            type="button"
+            className="focus-duration__option"
+            aria-pressed={
+              isSelected
+            }
+            onClick={
+              () =>
+                setSelectedDurationOption(
+                  option.id
+                )
+            }
+          >
+            <span>
+              {option.label}
+            </span>
+
+            <strong>
+              {option.id ===
+              "custom"
+                ? "Your time"
+                : formatDuration(
+                    option.minutes
+                  )}
+            </strong>
+          </button>
+        );
+      }
+    )}
+  </div>
+
+
+  {selectedDurationOption ===
+    "custom" && (
+    <div className="focus-duration__custom">
+      <label htmlFor="focus-custom-minutes">
+        Custom focus minutes
+      </label>
+
+
+      <input
+        id="focus-custom-minutes"
+        type="number"
+        inputMode="numeric"
+        min={
+          MIN_SCHEDULE_BLOCK_MINUTES
+        }
+        step="1"
+        value={
+          customFocusMinutes
+        }
+        onChange={
+          (event) =>
+            setCustomFocusMinutes(
+              event.target.value
+            )
+        }
+        aria-describedby="focus-custom-help"
+        aria-invalid={
+          Boolean(
+            customDurationError
+          )
+        }
+      />
+
+
+      <p
+        id="focus-custom-help"
+        className={
+          customDurationError
+            ? "focus-duration__custom-help focus-duration__custom-help--error"
+            : "focus-duration__custom-help"
+        }
+      >
+        {customDurationError ||
+          `Use a whole number of at least ${MIN_SCHEDULE_BLOCK_MINUTES} minutes.`}
+      </p>
+    </div>
+  )}
+</section>
+
+<section
+  className="focus-session-setup"
+  aria-labelledby="focus-session-setup-title"
+>
+  <div className="focus-section-heading">
+    <div>
+      <p>
+        SESSION SUMMARY
+      </p>
+
+      <h2 id="focus-session-setup-title">
+        Your focus setup
+      </h2>
+
+      <span>
+        Check the task and duration before
+        continuing into Focus mode.
+      </span>
+    </div>
+  </div>
+
+
+  <div className="focus-session-setup__summary">
+    <article>
+      <span>
+        Task
+      </span>
+
+      <strong>
+        {selectedTask
+          ? selectedTask.title
+          : "Choose a task"}
+      </strong>
+
+      {selectedTask && (
+        <small>
+          {
+            subjectMap.get(
+              String(
+                selectedTask
+                  .subjectId
+              )
+            ) ||
+            "Unknown subject"
+          }
+        </small>
+      )}
+    </article>
+
+
+    <article>
+      <span>
+        Focus time
+      </span>
+
+      <strong>
+        {selectedDurationMinutes
+          ? formatDuration(
+              selectedDurationMinutes
+            )
+          : "Choose a duration"}
+      </strong>
+
+      {selectedDurationOption && (
+        <small>
+          {
+            selectedDurationPreset
+              ?.label ||
+            "Custom"
+          }
+        </small>
+      )}
+    </article>
+  </div>
+
+
+  <div className="focus-session-setup__footer">
+    <div>
+      <strong>
+        {canContinueToFocus
+          ? "Your session setup is ready."
+          : "Choose a task and valid duration to continue."}
+      </strong>
+
+      <p>
+        The active countdown has not started
+        yet.
+      </p>
+    </div>
+
+
+    {canContinueToFocus ? (
+      <Link
+        to="/focus/session"
+        state={{
+          focusSetup: {
+            taskId:
+              selectedTask.id,
+
+            durationMinutes:
+              selectedDurationMinutes,
+
+            durationOption:
+              selectedDurationOption,
+          },
+        }}
+        className="focus-session-setup__continue"
+      >
+        Continue to focus
+
+        <ArrowRight
+          size={17}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+      </Link>
+    ) : (
+      <button
+        type="button"
+        className="focus-session-setup__continue"
+        disabled
+      >
+        Continue to focus
+
+        <ArrowRight
+          size={17}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+      </button>
+    )}
+  </div>
+</section>
     </main>
   );
 }
