@@ -23,6 +23,7 @@ import TaskDetailPage from "../features/tasks/TaskDetailPage.jsx";
 import PlannerPage from "../features/planner/PlannerPage.jsx";
 import AvailabilityPage from "../features/planner/AvailabilityPage.jsx";
 import CalendarPage from "../features/calendar/CalendarPage.jsx";
+import FocusPage from "../features/focus/FocusPage.jsx";
 
 import RoutePlaceholder from "./RoutePlaceholder.jsx";
 import LandingPage from "../features/landing/LandingPage.jsx";
@@ -113,15 +114,12 @@ const router = createBrowserRouter([
       },
 
       {
-        path: "/focus",
-        element: (
-          <RoutePlaceholder
-            eyebrow="FOCUS"
-            title="Ready to focus?"
-            description="Task, duration and environment selection will live here."
-          />
-        ),
-      },
+  path: "/focus",
+
+  element: (
+    <FocusPage />
+  ),
+},
 
       {
         path: "/calendar",
