@@ -24,6 +24,7 @@ import PlannerPage from "../features/planner/PlannerPage.jsx";
 import AvailabilityPage from "../features/planner/AvailabilityPage.jsx";
 import CalendarPage from "../features/calendar/CalendarPage.jsx";
 import FocusPage from "../features/focus/FocusPage.jsx";
+import FocusSessionPage from "../features/focus/FocusSessionPage.jsx";
 
 import RoutePlaceholder from "./RoutePlaceholder.jsx";
 import LandingPage from "../features/landing/LandingPage.jsx";
@@ -152,15 +153,12 @@ const router = createBrowserRouter([
     element: <FocusLayout />,
     children: [
       {
-        path: "/focus/session",
-        element: (
-          <RoutePlaceholder
-            eyebrow="DEEP FOCUS"
-            title="42 : 18"
-            description="Active Focus Mode intentionally uses a separate layout."
-          />
-        ),
-      },
+  path: "/focus/session",
+
+  element: (
+    <FocusSessionPage />
+  ),
+},
     ],
   },
 
