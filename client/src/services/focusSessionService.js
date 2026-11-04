@@ -13,8 +13,22 @@ export const FOCUS_TIMER_STATUS = {
   RUNNING:
     "running",
 
+  PAUSED:
+    "paused",
+
   COMPLETE:
     "complete",
+
+  ENDED:
+    "ended",
+};
+
+export const FOCUS_SESSION_END_REASON = {
+  TIMER_COMPLETE:
+    "timer_complete",
+
+  USER_ENDED:
+    "user_ended",
 };
 
 export const FOCUS_DURATION_OPTION = {
@@ -428,6 +442,76 @@ export const createFocusTimerRuntime = ({
   };
 };
 
+export const createFocusTimerResumeRuntime = ({
+  remainingSeconds,
+  resumedAtMs,
+}) => {
+  const safeRemainingSeconds =
+    Number(
+      remainingSeconds
+    );
+
+
+  const safeResumedAtMs =
+    Number(
+      resumedAtMs
+    );
+
+
+  if (
+    !Number.isInteger(
+      safeRemainingSeconds
+    ) ||
+    safeRemainingSeconds <= 0
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Focus resume requires a positive whole number of remaining seconds.",
+
+      runtime: null,
+    };
+  }
+
+
+  if (
+    !Number.isFinite(
+      safeResumedAtMs
+    ) ||
+    safeResumedAtMs < 0
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Focus resume requires a valid explicit resume time.",
+
+      runtime: null,
+    };
+  }
+
+
+  return {
+    valid: true,
+
+    error: "",
+
+    runtime: {
+      remainingSecondsAtResume:
+        safeRemainingSeconds,
+
+      resumedAtMs:
+        safeResumedAtMs,
+
+      endAtMs:
+        safeResumedAtMs +
+        safeRemainingSeconds *
+          1000,
+    },
+  };
+};
+
 export const calculateFocusTimerRemainingSeconds = ({
   endAtMs,
   currentTimeMs,
@@ -472,4 +556,130 @@ export const calculateFocusTimerRemainingSeconds = ({
     remainingMilliseconds /
       1000
   );
+};
+
+export const createFocusSessionEndSnapshot = ({
+  plannedDurationSeconds,
+  remainingSeconds,
+  endedAtMs,
+  reason,
+}) => {
+  const safePlannedDurationSeconds =
+    Number(
+      plannedDurationSeconds
+    );
+
+
+  const safeRemainingSeconds =
+    Number(
+      remainingSeconds
+    );
+
+
+  const safeEndedAtMs =
+    Number(
+      endedAtMs
+    );
+
+
+  if (
+    !Number.isInteger(
+      safePlannedDurationSeconds
+    ) ||
+    safePlannedDurationSeconds <= 0
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Focus session ending requires a valid planned duration.",
+
+      snapshot: null,
+    };
+  }
+
+
+  if (
+    !Number.isInteger(
+      safeRemainingSeconds
+    ) ||
+    safeRemainingSeconds < 0 ||
+    safeRemainingSeconds >
+      safePlannedDurationSeconds
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Focus session ending received an invalid remaining-time value.",
+
+      snapshot: null,
+    };
+  }
+
+
+  if (
+    !Number.isFinite(
+      safeEndedAtMs
+    ) ||
+    safeEndedAtMs < 0
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Focus session ending requires a valid explicit end time.",
+
+      snapshot: null,
+    };
+  }
+
+
+  if (
+    !Object.values(
+      FOCUS_SESSION_END_REASON
+    ).includes(
+      reason
+    )
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Focus session ending requires a valid end reason.",
+
+      snapshot: null,
+    };
+  }
+
+
+  const elapsedSeconds =
+    safePlannedDurationSeconds -
+    safeRemainingSeconds;
+
+
+  return {
+    valid: true,
+
+    error: "",
+
+    snapshot: {
+      plannedDurationSeconds:
+        safePlannedDurationSeconds,
+
+      remainingSeconds:
+        safeRemainingSeconds,
+
+      elapsedSeconds,
+
+      endedAtMs:
+        safeEndedAtMs,
+
+      reason,
+
+      reachedZero:
+        safeRemainingSeconds ===
+        0,
+    },
+  };
 };

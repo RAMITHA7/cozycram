@@ -3,7 +3,10 @@ import {
   BookOpen,
   CircleAlert,
   Clock3,
+  Pause,
+  Play,
   ShieldCheck,
+  Square,
   Timer,
 } from "lucide-react";
 
@@ -23,8 +26,11 @@ import {
 
 import {
   calculateFocusTimerRemainingSeconds,
+  createFocusSessionEndSnapshot,
+  createFocusTimerResumeRuntime,
   createFocusTimerRuntime,
   FOCUS_DURATION_OPTION,
+  FOCUS_SESSION_END_REASON,
   FOCUS_TIMER_STATUS,
   validateFocusSessionHandoff,
 } from "../../services/focusSessionService.js";
@@ -359,6 +365,20 @@ const [
   ""
 );
 
+const [
+  sessionEndSnapshot,
+  setSessionEndSnapshot,
+] = useState(
+  null
+);
+
+
+const [
+  endConfirmationOpen,
+  setEndConfirmationOpen,
+] = useState(
+  false
+);
 
 useEffect(
   () => {
@@ -415,19 +435,79 @@ useEffect(
 
 
         if (
-          nextRemainingSeconds ===
-          0
-        ) {
-          setTimerStatus(
-            FOCUS_TIMER_STATUS
-              .COMPLETE
-          );
+  nextRemainingSeconds ===
+  0
+) {
+  const endedAtMs =
+    Date.now();
 
 
-          setTimerRuntime(
-            null
-          );
-        }
+  const endResult =
+    createFocusSessionEndSnapshot({
+      plannedDurationSeconds:
+        sessionDraft
+          .durationMinutes *
+        60,
+
+      remainingSeconds:
+        0,
+
+      endedAtMs,
+
+      reason:
+        FOCUS_SESSION_END_REASON
+          .TIMER_COMPLETE,
+    });
+
+
+  if (
+    !endResult.valid
+  ) {
+    setTimerError(
+      endResult.error
+    );
+
+
+    setTimerStatus(
+      FOCUS_TIMER_STATUS
+        .READY
+    );
+
+
+    setTimerRuntime(
+      null
+    );
+
+
+    return;
+  }
+
+
+  setRemainingSeconds(
+    0
+  );
+
+
+  setSessionEndSnapshot(
+    endResult.snapshot
+  );
+
+
+  setTimerStatus(
+    FOCUS_TIMER_STATUS
+      .COMPLETE
+  );
+
+
+  setTimerRuntime(
+    null
+  );
+
+
+  setEndConfirmationOpen(
+    false
+  );
+}
       };
 
 
@@ -448,9 +528,11 @@ useEffect(
     };
   },
   [
-    timerStatus,
-    timerRuntime,
-  ]
+  timerStatus,
+  timerRuntime,
+  sessionDraft
+    ?.durationMinutes,
+]
 );
 
 const handleStartFocus =
@@ -469,6 +551,14 @@ const handleStartFocus =
       ""
     );
 
+    setSessionEndSnapshot(
+  null
+);
+
+
+setEndConfirmationOpen(
+  false
+);
 
     const runtimeResult =
   createFocusRuntimeOnStart(
@@ -505,6 +595,355 @@ const handleStartFocus =
     );
   };
 
+  const handlePauseFocus =
+  () => {
+    if (
+      timerStatus !==
+        FOCUS_TIMER_STATUS
+          .RUNNING ||
+      !timerRuntime ||
+      !sessionDraft
+    ) {
+      return;
+    }
+
+
+    setTimerError(
+      ""
+    );
+
+
+    const pausedAtMs =
+      Date.now();
+
+
+    const nextRemainingSeconds =
+      calculateFocusTimerRemainingSeconds({
+        endAtMs:
+          timerRuntime
+            .endAtMs,
+
+        currentTimeMs:
+          pausedAtMs,
+      });
+
+
+    if (
+      nextRemainingSeconds ===
+      null
+    ) {
+      setTimerError(
+        "CozyCram could not safely pause this Focus session."
+      );
+
+      return;
+    }
+
+
+    if (
+      nextRemainingSeconds ===
+      0
+    ) {
+      const endResult =
+        createFocusSessionEndSnapshot({
+          plannedDurationSeconds:
+            sessionDraft
+              .durationMinutes *
+            60,
+
+          remainingSeconds:
+            0,
+
+          endedAtMs:
+            pausedAtMs,
+
+          reason:
+            FOCUS_SESSION_END_REASON
+              .TIMER_COMPLETE,
+        });
+
+
+      if (
+        !endResult.valid
+      ) {
+        setTimerError(
+          endResult.error
+        );
+
+        return;
+      }
+
+
+      setRemainingSeconds(
+        0
+      );
+
+
+      setSessionEndSnapshot(
+        endResult.snapshot
+      );
+
+
+      setTimerRuntime(
+        null
+      );
+
+
+      setTimerStatus(
+        FOCUS_TIMER_STATUS
+          .COMPLETE
+      );
+
+
+      setEndConfirmationOpen(
+        false
+      );
+
+
+      return;
+    }
+
+
+    setRemainingSeconds(
+      nextRemainingSeconds
+    );
+
+
+    setTimerRuntime(
+      null
+    );
+
+
+    setTimerStatus(
+      FOCUS_TIMER_STATUS
+        .PAUSED
+    );
+
+
+    setEndConfirmationOpen(
+      false
+    );
+  };
+
+  const handleResumeFocus =
+  () => {
+    if (
+      timerStatus !==
+        FOCUS_TIMER_STATUS
+          .PAUSED ||
+      remainingSeconds <= 0
+    ) {
+      return;
+    }
+
+
+    setTimerError(
+      ""
+    );
+
+
+    const resumeResult =
+      createFocusTimerResumeRuntime({
+        remainingSeconds,
+
+        resumedAtMs:
+          Date.now(),
+      });
+
+
+    if (
+      !resumeResult.valid
+    ) {
+      setTimerError(
+        resumeResult.error
+      );
+
+      return;
+    }
+
+
+    setTimerRuntime(
+      resumeResult.runtime
+    );
+
+
+    setTimerStatus(
+      FOCUS_TIMER_STATUS
+        .RUNNING
+    );
+
+
+    setEndConfirmationOpen(
+      false
+    );
+  };
+
+  const handleRequestEndSession =
+  () => {
+    if (
+      timerStatus !==
+        FOCUS_TIMER_STATUS
+          .RUNNING &&
+      timerStatus !==
+        FOCUS_TIMER_STATUS
+          .PAUSED
+    ) {
+      return;
+    }
+
+
+    setEndConfirmationOpen(
+      true
+    );
+  };
+
+  const handleCancelEndSession =
+  () => {
+    setEndConfirmationOpen(
+      false
+    );
+  };
+
+  const handleConfirmEndSession =
+  () => {
+    if (
+      !sessionDraft ||
+      (
+        timerStatus !==
+          FOCUS_TIMER_STATUS
+            .RUNNING &&
+        timerStatus !==
+          FOCUS_TIMER_STATUS
+            .PAUSED
+      )
+    ) {
+      return;
+    }
+
+
+    setTimerError(
+      ""
+    );
+
+
+    const endedAtMs =
+      Date.now();
+
+
+    let finalRemainingSeconds =
+      remainingSeconds;
+
+
+    if (
+      timerStatus ===
+        FOCUS_TIMER_STATUS
+          .RUNNING
+    ) {
+      if (
+        !timerRuntime
+      ) {
+        setTimerError(
+          "CozyCram could not safely end the active Focus session."
+        );
+
+        return;
+      }
+
+
+      const calculatedRemaining =
+        calculateFocusTimerRemainingSeconds({
+          endAtMs:
+            timerRuntime
+              .endAtMs,
+
+          currentTimeMs:
+            endedAtMs,
+        });
+
+
+      if (
+        calculatedRemaining ===
+        null
+      ) {
+        setTimerError(
+          "CozyCram could not safely calculate the final Focus time."
+        );
+
+        return;
+      }
+
+
+      finalRemainingSeconds =
+        calculatedRemaining;
+    }
+
+
+    const reachedZero =
+      finalRemainingSeconds ===
+      0;
+
+
+    const endResult =
+      createFocusSessionEndSnapshot({
+        plannedDurationSeconds:
+          sessionDraft
+            .durationMinutes *
+          60,
+
+        remainingSeconds:
+          finalRemainingSeconds,
+
+        endedAtMs,
+
+        reason:
+          reachedZero
+            ? FOCUS_SESSION_END_REASON
+                .TIMER_COMPLETE
+            : FOCUS_SESSION_END_REASON
+                .USER_ENDED,
+      });
+
+
+    if (
+      !endResult.valid
+    ) {
+      setTimerError(
+        endResult.error
+      );
+
+      return;
+    }
+
+
+    setRemainingSeconds(
+      finalRemainingSeconds
+    );
+
+
+    setSessionEndSnapshot(
+      endResult.snapshot
+    );
+
+
+    setTimerRuntime(
+      null
+    );
+
+
+    setTimerStatus(
+      reachedZero
+        ? FOCUS_TIMER_STATUS
+            .COMPLETE
+        : FOCUS_TIMER_STATUS
+            .ENDED
+    );
+
+
+    setEndConfirmationOpen(
+      false
+    );
+  };
+
   const timerIsReady =
   timerStatus ===
   FOCUS_TIMER_STATUS.READY;
@@ -515,9 +954,24 @@ const timerIsRunning =
   FOCUS_TIMER_STATUS.RUNNING;
 
 
+const timerIsPaused =
+  timerStatus ===
+  FOCUS_TIMER_STATUS.PAUSED;
+
+
 const timerIsComplete =
   timerStatus ===
   FOCUS_TIMER_STATUS.COMPLETE;
+
+
+const timerIsEnded =
+  timerStatus ===
+  FOCUS_TIMER_STATUS.ENDED;
+
+
+const timerIsActive =
+  timerIsRunning ||
+  timerIsPaused;
 
   if (
     loadError
@@ -601,18 +1055,30 @@ const timerIsComplete =
       aria-labelledby="focus-session-title"
     >
       <header className="focus-session-header">
-        <Link
-          to="/focus"
-          className="focus-session-header__back"
-        >
-          <ArrowLeft
-            size={18}
-            strokeWidth={1.8}
-            aria-hidden="true"
-          />
+        {timerIsActive ? (
+  <span className="focus-session-header__back focus-session-header__back--inactive">
+    <Timer
+      size={18}
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
 
-          Change setup
-        </Link>
+    Session active
+  </span>
+) : (
+  <Link
+    to="/focus"
+    className="focus-session-header__back"
+  >
+    <ArrowLeft
+      size={18}
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
+
+    Change setup
+  </Link>
+)}
 
 
         <div>
@@ -813,26 +1279,38 @@ const timerIsComplete =
 
       <h2 id="focus-session-timer-title">
         {timerIsReady &&
-          "Start when you're ready"}
+  "Start when you're ready"}
 
-        {timerIsRunning &&
-          "Focus in progress"}
+{timerIsRunning &&
+  "Focus in progress"}
 
-        {timerIsComplete &&
-          "Focus timer complete"}
+{timerIsPaused &&
+  "Focus paused"}
+
+{timerIsComplete &&
+  "Focus timer complete"}
+
+{timerIsEnded &&
+  "Session ended"}
       </h2>
     </div>
 
 
     <span className="focus-session-timer__status">
       {timerIsReady &&
-        "Ready"}
+  "Ready"}
 
-      {timerIsRunning &&
-        "Focusing"}
+{timerIsRunning &&
+  "Focusing"}
 
-      {timerIsComplete &&
-        "Complete"}
+{timerIsPaused &&
+  "Paused"}
+
+{timerIsComplete &&
+  "Complete"}
+
+{timerIsEnded &&
+  "Ended"}
     </span>
   </div>
 
@@ -917,8 +1395,8 @@ const timerIsComplete =
     </div>
   )}
 
-
-  {timerIsRunning && (
+{timerIsRunning && (
+  <>
     <div
       className="focus-session-timer__notice"
       role="status"
@@ -935,42 +1413,225 @@ const timerIsComplete =
         </strong>
 
         <p>
-          CozyCram calculates the
-          countdown from the real
-          session end time, so switching
-          browser tabs will not pause
-          the clock.
+          The countdown follows the real
+          end timestamp. Pause temporarily
+          freezes your remaining Focus time.
         </p>
       </div>
     </div>
-  )}
 
 
-  {timerIsComplete && (
+    <div className="focus-session-timer__controls">
+      <button
+        type="button"
+        className="focus-session-timer__control focus-session-timer__control--primary"
+        onClick={
+          handlePauseFocus
+        }
+      >
+        <Pause
+          size={17}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        Pause
+      </button>
+
+
+      <button
+        type="button"
+        className="focus-session-timer__control"
+        onClick={
+          handleRequestEndSession
+        }
+      >
+        <Square
+          size={16}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        End session
+      </button>
+    </div>
+  </>
+)}
+
+{timerIsPaused && (
+  <>
     <div
       className="focus-session-timer__notice"
       role="status"
       aria-live="polite"
     >
-      <ShieldCheck
-        size={22}
+      <Pause
+        size={20}
         strokeWidth={1.8}
         aria-hidden="true"
       />
 
       <div>
         <strong>
-          Timer finished
+          Focus paused
         </strong>
 
         <p>
-          The countdown reached zero.
-          CozyCram has not recorded task
-          progress or completion yet.
+          The remaining time is frozen.
+          Resume when you're ready to
+          continue this session.
         </p>
       </div>
     </div>
-  )}
+
+
+    <div className="focus-session-timer__controls">
+      <button
+        type="button"
+        className="focus-session-timer__control focus-session-timer__control--primary"
+        onClick={
+          handleResumeFocus
+        }
+      >
+        <Play
+          size={17}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        Resume
+      </button>
+
+
+      <button
+        type="button"
+        className="focus-session-timer__control"
+        onClick={
+          handleRequestEndSession
+        }
+      >
+        <Square
+          size={16}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        End session
+      </button>
+    </div>
+  </>
+)}
+
+{endConfirmationOpen &&
+  timerIsActive && (
+  <div
+    className="focus-session-timer__end-confirmation"
+    role="group"
+    aria-labelledby="focus-end-confirmation-title"
+  >
+    <div>
+      <strong id="focus-end-confirmation-title">
+        End this Focus session?
+      </strong>
+
+      <p>
+        {timerIsRunning
+          ? "The timer is still running until you confirm. Ending now will stop this session early."
+          : "The timer is paused. Ending now will close this session with the current remaining time."}
+      </p>
+    </div>
+
+
+    <div className="focus-session-timer__end-actions">
+      <button
+        type="button"
+        onClick={
+          handleCancelEndSession
+        }
+      >
+        Keep session
+      </button>
+
+
+      <button
+        type="button"
+        className="focus-session-timer__end-now"
+        onClick={
+          handleConfirmEndSession
+        }
+      >
+        End now
+      </button>
+    </div>
+  </div>
+)}
+
+  {timerIsComplete && (
+  <div
+    className="focus-session-timer__notice"
+    role="status"
+    aria-live="polite"
+  >
+    <ShieldCheck
+      size={22}
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
+
+    <div>
+      <strong>
+        Focus timer complete
+      </strong>
+
+      <p>
+        The full selected Focus duration
+        reached zero. No task progress has
+        been recorded yet.
+      </p>
+    </div>
+  </div>
+)}
+
+{timerIsEnded &&
+  sessionEndSnapshot && (
+  <div
+    className="focus-session-timer__notice"
+    role="status"
+    aria-live="polite"
+  >
+    <Square
+      size={20}
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
+
+    <div>
+      <strong>
+        Session ended
+      </strong>
+
+      <p>
+        You focused for approximately{" "}
+        {
+          formatTimerClock(
+            sessionEndSnapshot
+              .elapsedSeconds
+          )
+        }.
+        {" "}
+        {
+          formatTimerClock(
+            sessionEndSnapshot
+              .remainingSeconds
+          )
+        }
+        {" "}
+        remained. Nothing has been written
+        to task progress yet.
+      </p>
+    </div>
+  </div>
+)}
 </section>
         </main>
   );
