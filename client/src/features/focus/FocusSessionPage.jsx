@@ -43,11 +43,14 @@ import {
 } from "../../services/focusSessionService.js";
 
 import {
+  calculateSmartBreakRemainingSeconds,
   createSmartBreakHandoff,
   createSmartBreakReadySelection,
+  createSmartBreakTimerRuntime,
   evaluateSmartBreakEligibility,
   SMART_BREAK_READY_ACTION,
   SMART_BREAK_STATUS,
+  SMART_BREAK_TIMER_STATUS,
 } from "../../services/smartBreakService.js";
 
 import "./focusSession.css";
@@ -304,6 +307,14 @@ const createFocusRuntimeOnStart = (
   });
 };
 
+const createSmartBreakRuntimeOnStart = (
+  durationSeconds
+) => {
+  return createSmartBreakTimerRuntime({
+    durationSeconds,
+    startedAtMs: Date.now(),
+  });
+};
 function FocusSessionPageContent({
   location,
 }) {
@@ -437,6 +448,38 @@ const [
 const [
   smartBreakSelectionError,
   setSmartBreakSelectionError,
+] = useState(
+  ""
+);
+
+const [
+  breakTimerStatus,
+  setBreakTimerStatus,
+] = useState(
+  SMART_BREAK_TIMER_STATUS
+    .IDLE
+);
+
+
+const [
+  breakTimerRuntime,
+  setBreakTimerRuntime,
+] = useState(
+  null
+);
+
+
+const [
+  breakRemainingSeconds,
+  setBreakRemainingSeconds,
+] = useState(
+  0
+);
+
+
+const [
+  breakTimerError,
+  setBreakTimerError,
 ] = useState(
   ""
 );
@@ -596,6 +639,109 @@ useEffect(
 ]
 );
 
+useEffect(
+  () => {
+    if (
+      breakTimerStatus !==
+        SMART_BREAK_TIMER_STATUS
+          .RUNNING ||
+      !breakTimerRuntime
+    ) {
+      return undefined;
+    }
+
+
+    const syncBreakRemainingTime =
+      () => {
+        const nextRemainingSeconds =
+          calculateSmartBreakRemainingSeconds({
+            endAtMs:
+              breakTimerRuntime
+                .endAtMs,
+
+            currentTimeMs:
+              Date.now(),
+          });
+
+
+        if (
+          nextRemainingSeconds ===
+          null
+        ) {
+          setBreakTimerError(
+            "CozyCram could not safely calculate the remaining break time."
+          );
+
+
+          setBreakTimerStatus(
+            SMART_BREAK_TIMER_STATUS
+              .IDLE
+          );
+
+
+          setBreakTimerRuntime(
+            null
+          );
+
+
+          setBreakRemainingSeconds(
+            0
+          );
+
+
+          setSmartBreakSelection(
+            null
+          );
+
+
+          return;
+        }
+
+
+        setBreakRemainingSeconds(
+          nextRemainingSeconds
+        );
+
+
+        if (
+          nextRemainingSeconds ===
+          0
+        ) {
+          setBreakTimerStatus(
+            SMART_BREAK_TIMER_STATUS
+              .COMPLETE
+          );
+
+
+          setBreakTimerRuntime(
+            null
+          );
+        }
+      };
+
+
+    syncBreakRemainingTime();
+
+
+    const intervalId =
+      window.setInterval(
+        syncBreakRemainingTime,
+        250
+      );
+
+
+    return () => {
+      window.clearInterval(
+        intervalId
+      );
+    };
+  },
+  [
+    breakTimerStatus,
+    breakTimerRuntime,
+  ]
+);
+
 const handleStartFocus =
   () => {
     if (
@@ -665,6 +811,46 @@ setSmartBreakSelection(
 
 
 setSmartBreakSelectionError(
+  ""
+);
+
+setBreakTimerStatus(
+  SMART_BREAK_TIMER_STATUS
+    .IDLE
+);
+
+
+setBreakTimerRuntime(
+  null
+);
+
+
+setBreakRemainingSeconds(
+  0
+);
+
+
+setBreakTimerError(
+  ""
+);
+
+setBreakTimerStatus(
+  SMART_BREAK_TIMER_STATUS
+    .IDLE
+);
+
+
+setBreakTimerRuntime(
+  null
+);
+
+
+setBreakRemainingSeconds(
+  0
+);
+
+
+setBreakTimerError(
   ""
 );
 
@@ -1190,6 +1376,17 @@ const smartBreakSkipped =
   SMART_BREAK_READY_ACTION
     .CONTINUE_WITHOUT_BREAK;
 
+    const breakTimerIsRunning =
+  breakTimerStatus ===
+  SMART_BREAK_TIMER_STATUS
+    .RUNNING;
+
+
+const breakTimerIsComplete =
+  breakTimerStatus ===
+  SMART_BREAK_TIMER_STATUS
+    .COMPLETE;
+
     const handleSmartBreakSelection =
   (
     action
@@ -1235,14 +1432,117 @@ const smartBreakSkipped =
 
   const handleStartBreak =
   () => {
-    handleSmartBreakSelection(
-      SMART_BREAK_READY_ACTION
-        .START_BREAK
+    if (
+      !smartBreakIsReady ||
+      !smartBreakHandoff ||
+      breakTimerStatus !==
+        SMART_BREAK_TIMER_STATUS
+          .IDLE
+    ) {
+      return;
+    }
+
+
+    setSmartBreakSelectionError(
+      ""
+    );
+
+
+    setBreakTimerError(
+      ""
+    );
+
+
+    const selectionResult =
+      createSmartBreakReadySelection({
+        handoff:
+          smartBreakHandoff,
+
+        action:
+          SMART_BREAK_READY_ACTION
+            .START_BREAK,
+      });
+
+
+    if (
+      !selectionResult.valid
+    ) {
+      setSmartBreakSelectionError(
+        selectionResult.error
+      );
+
+      return;
+    }
+
+    const runtimeResult =
+  createSmartBreakRuntimeOnStart(
+    selectionResult
+      .selection
+      .breakPlan
+      .durationSeconds
+  );
+
+    if (
+      !runtimeResult.valid
+    ) {
+      setBreakTimerError(
+        runtimeResult.error
+      );
+
+      return;
+    }
+
+
+    setSmartBreakSelection(
+      selectionResult
+        .selection
+    );
+
+
+    setBreakRemainingSeconds(
+      runtimeResult
+        .runtime
+        .durationSeconds
+    );
+
+
+    setBreakTimerRuntime(
+      runtimeResult.runtime
+    );
+
+
+    setBreakTimerStatus(
+      SMART_BREAK_TIMER_STATUS
+        .RUNNING
     );
   };
 
   const handleContinueWithoutBreak =
   () => {
+    if (
+      breakTimerStatus !==
+        SMART_BREAK_TIMER_STATUS
+          .IDLE
+    ) {
+      return;
+    }
+
+
+    setBreakTimerError(
+      ""
+    );
+
+
+    setBreakTimerRuntime(
+      null
+    );
+
+
+    setBreakRemainingSeconds(
+      0
+    );
+
+
     handleSmartBreakSelection(
       SMART_BREAK_READY_ACTION
         .CONTINUE_WITHOUT_BREAK
@@ -1251,12 +1551,26 @@ const smartBreakSkipped =
 
   const handleChangeSmartBreakChoice =
   () => {
+    if (
+      breakTimerStatus !==
+        SMART_BREAK_TIMER_STATUS
+          .IDLE
+    ) {
+      return;
+    }
+
+
     setSmartBreakSelection(
       null
     );
 
 
     setSmartBreakSelectionError(
+      ""
+    );
+
+
+    setBreakTimerError(
       ""
     );
   };
@@ -2577,47 +2891,136 @@ const taskResultSummary =
       )}
 
 
-      {smartBreakStartRequested && (
-        <div
-          className="focus-smart-break__choice"
-          role="status"
-          aria-live="polite"
-        >
-          <Coffee
-            size={20}
-            strokeWidth={1.8}
-            aria-hidden="true"
-          />
+      {smartBreakStartRequested &&
+  (
+    breakTimerIsRunning ||
+    breakTimerIsComplete
+  ) && (
+  <div
+    className="focus-smart-break__timer"
+    aria-labelledby="focus-smart-break-timer-title"
+  >
+    <div className="focus-smart-break__timer-heading">
+      <div>
+        <small>
+          BREAK TIMER
+        </small>
 
-          <div>
-            <strong>
-              Break selected
-            </strong>
-
-            <p>
-              Your{" "}
-              {
-                smartBreakSelection
-                  .breakPlan
-                  .durationMinutes
-              }
-              -minute break is ready.
-              The countdown has not started yet.
-            </p>
-          </div>
+        <h3 id="focus-smart-break-timer-title">
+          {breakTimerIsRunning
+            ? "Break in progress"
+            : "Break complete"}
+        </h3>
+      </div>
 
 
-          <button
-            type="button"
-            onClick={
-              handleChangeSmartBreakChoice
-            }
-          >
-            Change choice
-          </button>
+      <span>
+        {breakTimerIsRunning
+          ? "Resting"
+          : "Complete"}
+      </span>
+    </div>
+
+
+    <div
+      className="focus-smart-break__clock"
+      aria-live="off"
+    >
+      <Coffee
+        size={24}
+        strokeWidth={1.8}
+        aria-hidden="true"
+      />
+
+      <strong>
+        {
+          formatTimerClock(
+            breakRemainingSeconds
+          )
+        }
+      </strong>
+
+      <p>
+        {
+          smartBreakSelection
+            .breakPlan
+            .durationMinutes
+        }
+        -minute Smart Break
+      </p>
+    </div>
+
+
+    {breakTimerIsRunning && (
+      <div
+        className="focus-smart-break__timer-notice"
+        role="status"
+      >
+        <Coffee
+          size={18}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        <div>
+          <strong>
+            Break in progress
+          </strong>
+
+          <p>
+            The countdown uses the real
+            break end time, so switching
+            tabs will not pause it.
+          </p>
         </div>
-      )}
+      </div>
+    )}
 
+
+    {breakTimerIsComplete && (
+      <div
+        className="focus-smart-break__timer-notice"
+        role="status"
+        aria-live="polite"
+      >
+        <CheckCircle2
+          size={19}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        <div>
+          <strong>
+            Break timer complete
+          </strong>
+
+          <p>
+            Your saved Smart Break
+            reached zero.
+          </p>
+        </div>
+      </div>
+    )}
+
+
+    {breakTimerError && (
+      <div
+        className="focus-smart-break__selection-error"
+        role="alert"
+      >
+        <CircleAlert
+          size={18}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        <p>
+          {breakTimerError}
+        </p>
+      </div>
+    )}
+  </div>
+)}
 
       {smartBreakSkipped && (
         <div

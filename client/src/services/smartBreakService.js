@@ -32,6 +32,16 @@ export const SMART_BREAK_READY_ACTION = {
     "continue_without_break",
 };
 
+export const SMART_BREAK_TIMER_STATUS = {
+  IDLE:
+    "idle",
+
+  RUNNING:
+    "running",
+
+  COMPLETE:
+    "complete",
+};
 
 export const SMART_BREAK_REASON = {
   FOCUS_COMPLETED:
@@ -790,3 +800,118 @@ export const createSmartBreakReadySelection = ({
   };
 };
 
+export const createSmartBreakTimerRuntime = ({
+  durationSeconds,
+  startedAtMs,
+}) => {
+  const safeDurationSeconds =
+    Number(
+      durationSeconds
+    );
+
+
+  const safeStartedAtMs =
+    Number(
+      startedAtMs
+    );
+
+
+  if (
+    !Number.isInteger(
+      safeDurationSeconds
+    ) ||
+    safeDurationSeconds <= 0
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break timer requires a positive whole-number duration.",
+
+      runtime: null,
+    };
+  }
+
+
+  if (
+    !Number.isFinite(
+      safeStartedAtMs
+    ) ||
+    safeStartedAtMs < 0
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break timer requires a valid explicit start time.",
+
+      runtime: null,
+    };
+  }
+
+
+  return {
+    valid: true,
+
+    error: "",
+
+    runtime: {
+      durationSeconds:
+        safeDurationSeconds,
+
+      startedAtMs:
+        safeStartedAtMs,
+
+      endAtMs:
+        safeStartedAtMs +
+        safeDurationSeconds *
+          1000,
+    },
+  };
+};
+
+export const calculateSmartBreakRemainingSeconds = ({
+  endAtMs,
+  currentTimeMs,
+}) => {
+  const safeEndAtMs =
+    Number(
+      endAtMs
+    );
+
+
+  const safeCurrentTimeMs =
+    Number(
+      currentTimeMs
+    );
+
+
+  if (
+    !Number.isFinite(
+      safeEndAtMs
+    ) ||
+    !Number.isFinite(
+      safeCurrentTimeMs
+    )
+  ) {
+    return null;
+  }
+
+
+  const remainingMilliseconds =
+    safeEndAtMs -
+    safeCurrentTimeMs;
+
+
+  if (
+    remainingMilliseconds <= 0
+  ) {
+    return 0;
+  }
+
+
+  return Math.ceil(
+    remainingMilliseconds /
+      1000
+  );
+};
