@@ -24,6 +24,14 @@ export const SMART_BREAK_STATUS = {
     "disabled",
 };
 
+export const SMART_BREAK_READY_ACTION = {
+  START_BREAK:
+    "start_break",
+
+  CONTINUE_WITHOUT_BREAK:
+    "continue_without_break",
+};
+
 
 export const SMART_BREAK_REASON = {
   FOCUS_COMPLETED:
@@ -650,3 +658,135 @@ export const createSmartBreakHandoff = ({
     },
   };
 };
+
+export const createSmartBreakReadySelection = ({
+  handoff,
+  action,
+}) => {
+  if (
+    !handoff ||
+    typeof handoff !==
+      "object"
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break selection requires a valid break handoff.",
+
+      selection: null,
+    };
+  }
+
+
+  if (
+    handoff.version !==
+      SMART_BREAK_HANDOFF_VERSION
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break selection received an unsupported handoff version.",
+
+      selection: null,
+    };
+  }
+
+
+  if (
+    !Object.values(
+      SMART_BREAK_READY_ACTION
+    ).includes(
+      action
+    )
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Choose a valid Smart Break action.",
+
+      selection: null,
+    };
+  }
+
+
+  const durationMinutes =
+    Number(
+      handoff
+        .breakPlan
+        ?.durationMinutes
+    );
+
+
+  const durationSeconds =
+    Number(
+      handoff
+        .breakPlan
+        ?.durationSeconds
+    );
+
+
+  if (
+    !Number.isInteger(
+      durationMinutes
+    ) ||
+    durationMinutes <= 0
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break selection requires a positive break duration.",
+
+      selection: null,
+    };
+  }
+
+
+  if (
+    !Number.isInteger(
+      durationSeconds
+    ) ||
+    durationSeconds !==
+      durationMinutes * 60
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break selection received inconsistent break-duration accounting.",
+
+      selection: null,
+    };
+  }
+
+
+  return {
+    valid: true,
+
+    error: "",
+
+    selection: {
+      action,
+
+      breakPlan: {
+        durationMinutes,
+
+        durationSeconds,
+
+        focusPreset:
+          handoff
+            .breakPlan
+            .focusPreset,
+      },
+
+      sourceFocus: {
+        ...handoff
+          .sourceFocus,
+      },
+    },
+  };
+};
+

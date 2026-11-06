@@ -44,7 +44,9 @@ import {
 
 import {
   createSmartBreakHandoff,
+  createSmartBreakReadySelection,
   evaluateSmartBreakEligibility,
+  SMART_BREAK_READY_ACTION,
   SMART_BREAK_STATUS,
 } from "../../services/smartBreakService.js";
 
@@ -424,6 +426,21 @@ const [
   false
 );
 
+const [
+  smartBreakSelection,
+  setSmartBreakSelection,
+] = useState(
+  null
+);
+
+
+const [
+  smartBreakSelectionError,
+  setSmartBreakSelectionError,
+] = useState(
+  ""
+);
+
 useEffect(
   () => {
     if (
@@ -640,6 +657,24 @@ setTaskResultNotice(
 
 setTaskResultApplied(
   false
+);
+
+setSmartBreakSelection(
+  null
+);
+
+
+setSmartBreakSelectionError(
+  ""
+);
+
+setSmartBreakSelection(
+  null
+);
+
+
+setSmartBreakSelectionError(
+  ""
 );
 
     const runtimeResult =
@@ -1141,6 +1176,90 @@ const smartBreakHasError =
   smartBreakEligibilityResult &&
   smartBreakEligibilityResult
     .valid === false;
+
+    const smartBreakStartRequested =
+  smartBreakSelection
+    ?.action ===
+  SMART_BREAK_READY_ACTION
+    .START_BREAK;
+
+
+const smartBreakSkipped =
+  smartBreakSelection
+    ?.action ===
+  SMART_BREAK_READY_ACTION
+    .CONTINUE_WITHOUT_BREAK;
+
+    const handleSmartBreakSelection =
+  (
+    action
+  ) => {
+    if (
+      !smartBreakIsReady ||
+      !smartBreakHandoff
+    ) {
+      return;
+    }
+
+
+    setSmartBreakSelectionError(
+      ""
+    );
+
+
+    const selectionResult =
+      createSmartBreakReadySelection({
+        handoff:
+          smartBreakHandoff,
+
+        action,
+      });
+
+
+    if (
+      !selectionResult.valid
+    ) {
+      setSmartBreakSelectionError(
+        selectionResult.error
+      );
+
+      return;
+    }
+
+
+    setSmartBreakSelection(
+      selectionResult
+        .selection
+    );
+  };
+
+  const handleStartBreak =
+  () => {
+    handleSmartBreakSelection(
+      SMART_BREAK_READY_ACTION
+        .START_BREAK
+    );
+  };
+
+  const handleContinueWithoutBreak =
+  () => {
+    handleSmartBreakSelection(
+      SMART_BREAK_READY_ACTION
+        .CONTINUE_WITHOUT_BREAK
+    );
+  };
+
+  const handleChangeSmartBreakChoice =
+  () => {
+    setSmartBreakSelection(
+      null
+    );
+
+
+    setSmartBreakSelectionError(
+      ""
+    );
+  };
 
 const taskResultSummaryResult =
   sessionHasEnded &&
@@ -2325,6 +2444,7 @@ const taskResultSummary =
     </div>
   </section>
 )}
+
 {smartBreakIsReady && (
   <section
     className="focus-smart-break"
@@ -2357,9 +2477,9 @@ const taskResultSummary =
 
       <span>
         Your Focus timer reached its
-        planned end, so CozyCram prepared
-        the break saved with your Focus
-        preference.
+        planned end. Choose whether to
+        take the saved break or continue
+        without starting it.
       </span>
 
 
@@ -2399,25 +2519,164 @@ const taskResultSummary =
       </div>
 
 
-      <div
-        className="focus-smart-break__notice"
-        role="status"
-        aria-live="polite"
-      >
-        <Coffee
-          size={18}
-          strokeWidth={1.8}
-          aria-hidden="true"
-        />
+      {!smartBreakSelection && (
+        <div className="focus-smart-break__ready">
+          <div
+            className="focus-smart-break__notice"
+            role="status"
+            aria-live="polite"
+          >
+            <Coffee
+              size={18}
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
 
-        <p>
-          Break ready. The break countdown
-          has not started yet.
-        </p>
-      </div>
+            <p>
+              Break ready. Nothing starts
+              until you choose an action.
+            </p>
+          </div>
+
+
+          <div className="focus-smart-break__actions">
+            <button
+              type="button"
+              className="focus-smart-break__action focus-smart-break__action--primary"
+              onClick={
+                handleStartBreak
+              }
+            >
+              <Coffee
+                size={17}
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+
+              Start break
+            </button>
+
+
+            <button
+              type="button"
+              className="focus-smart-break__action"
+              onClick={
+                handleContinueWithoutBreak
+              }
+            >
+              <ArrowRight
+                size={17}
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+
+              Continue without break
+            </button>
+          </div>
+        </div>
+      )}
+
+
+      {smartBreakStartRequested && (
+        <div
+          className="focus-smart-break__choice"
+          role="status"
+          aria-live="polite"
+        >
+          <Coffee
+            size={20}
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
+
+          <div>
+            <strong>
+              Break selected
+            </strong>
+
+            <p>
+              Your{" "}
+              {
+                smartBreakSelection
+                  .breakPlan
+                  .durationMinutes
+              }
+              -minute break is ready.
+              The countdown has not started yet.
+            </p>
+          </div>
+
+
+          <button
+            type="button"
+            onClick={
+              handleChangeSmartBreakChoice
+            }
+          >
+            Change choice
+          </button>
+        </div>
+      )}
+
+
+      {smartBreakSkipped && (
+        <div
+          className="focus-smart-break__choice"
+          role="status"
+          aria-live="polite"
+        >
+          <ArrowRight
+            size={20}
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
+
+          <div>
+            <strong>
+              Continuing without break
+            </strong>
+
+            <p>
+              No Smart Break timer will
+              start from this Focus session.
+            </p>
+          </div>
+
+
+          <button
+            type="button"
+            onClick={
+              handleChangeSmartBreakChoice
+            }
+          >
+            Change choice
+          </button>
+        </div>
+      )}
+
+
+      {smartBreakSelectionError && (
+        <div
+          className="focus-smart-break__selection-error"
+          role="alert"
+        >
+          <CircleAlert
+            size={18}
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
+
+          <p>
+            {
+              smartBreakSelectionError
+            }
+          </p>
+        </div>
+      )}
     </div>
   </section>
 )}
+
 {smartBreakIsDisabled && (
   <section
     className="focus-smart-break focus-smart-break--muted"
