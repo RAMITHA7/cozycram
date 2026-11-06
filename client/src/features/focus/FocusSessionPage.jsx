@@ -44,10 +44,12 @@ import {
 
 import {
   calculateSmartBreakRemainingSeconds,
+  createSmartBreakEndSnapshot,
   createSmartBreakHandoff,
   createSmartBreakReadySelection,
   createSmartBreakTimerRuntime,
   evaluateSmartBreakEligibility,
+  SMART_BREAK_END_REASON,
   SMART_BREAK_READY_ACTION,
   SMART_BREAK_STATUS,
   SMART_BREAK_TIMER_STATUS,
@@ -484,6 +486,21 @@ const [
   ""
 );
 
+const [
+  breakEndSnapshot,
+  setBreakEndSnapshot,
+] = useState(
+  null
+);
+
+
+const [
+  breakEndConfirmationOpen,
+  setBreakEndConfirmationOpen,
+] = useState(
+  false
+);
+
 useEffect(
   () => {
     if (
@@ -704,19 +721,79 @@ useEffect(
 
 
         if (
-          nextRemainingSeconds ===
-          0
-        ) {
-          setBreakTimerStatus(
-            SMART_BREAK_TIMER_STATUS
-              .COMPLETE
-          );
+  nextRemainingSeconds ===
+  0
+) {
+  const endedAtMs =
+    Date.now();
 
 
-          setBreakTimerRuntime(
-            null
-          );
-        }
+  const endResult =
+    createSmartBreakEndSnapshot({
+      plannedDurationSeconds:
+        smartBreakSelection
+          .breakPlan
+          .durationSeconds,
+
+      remainingSeconds:
+        0,
+
+      endedAtMs,
+
+      reason:
+        SMART_BREAK_END_REASON
+          .TIMER_COMPLETE,
+    });
+
+
+  if (
+    !endResult.valid
+  ) {
+    setBreakTimerError(
+      endResult.error
+    );
+
+
+    setBreakTimerStatus(
+      SMART_BREAK_TIMER_STATUS
+        .IDLE
+    );
+
+
+    setBreakTimerRuntime(
+      null
+    );
+
+
+    return;
+  }
+
+
+  setBreakRemainingSeconds(
+    0
+  );
+
+
+  setBreakEndSnapshot(
+    endResult.snapshot
+  );
+
+
+  setBreakTimerStatus(
+    SMART_BREAK_TIMER_STATUS
+      .COMPLETE
+  );
+
+
+  setBreakTimerRuntime(
+    null
+  );
+
+
+  setBreakEndConfirmationOpen(
+    false
+  );
+}
       };
 
 
@@ -737,9 +814,12 @@ useEffect(
     };
   },
   [
-    breakTimerStatus,
-    breakTimerRuntime,
-  ]
+  breakTimerStatus,
+  breakTimerRuntime,
+  smartBreakSelection
+    ?.breakPlan
+    ?.durationSeconds,
+]
 );
 
 const handleStartFocus =
@@ -834,6 +914,15 @@ setBreakTimerError(
   ""
 );
 
+setBreakEndSnapshot(
+  null
+);
+
+
+setBreakEndConfirmationOpen(
+  false
+);
+
 setBreakTimerStatus(
   SMART_BREAK_TIMER_STATUS
     .IDLE
@@ -852,6 +941,15 @@ setBreakRemainingSeconds(
 
 setBreakTimerError(
   ""
+);
+
+setBreakEndSnapshot(
+  null
+);
+
+
+setBreakEndConfirmationOpen(
+  false
 );
 
 setSmartBreakSelection(
@@ -1387,6 +1485,21 @@ const breakTimerIsComplete =
   SMART_BREAK_TIMER_STATUS
     .COMPLETE;
 
+
+const breakTimerIsEnded =
+  breakTimerStatus ===
+  SMART_BREAK_TIMER_STATUS
+    .ENDED;
+
+
+const breakHasFinished =
+  breakTimerIsComplete ||
+  breakTimerIsEnded;
+
+  const canContinueAfterBreak =
+  smartBreakSkipped ||
+  breakHasFinished;
+
     const handleSmartBreakSelection =
   (
     action
@@ -1452,6 +1565,14 @@ const breakTimerIsComplete =
       ""
     );
 
+   setBreakEndSnapshot(
+  null
+);
+
+
+setBreakEndConfirmationOpen(
+  false
+);
 
     const selectionResult =
       createSmartBreakReadySelection({
@@ -1514,6 +1635,140 @@ const breakTimerIsComplete =
     setBreakTimerStatus(
       SMART_BREAK_TIMER_STATUS
         .RUNNING
+    );
+  };
+
+  const handleRequestEndBreak =
+  () => {
+    if (
+      breakTimerStatus !==
+        SMART_BREAK_TIMER_STATUS
+          .RUNNING
+    ) {
+      return;
+    }
+
+
+    setBreakEndConfirmationOpen(
+      true
+    );
+  };
+
+  const handleKeepBreak =
+  () => {
+    setBreakEndConfirmationOpen(
+      false
+    );
+  };
+
+  const handleConfirmEndBreak =
+  () => {
+    if (
+      breakTimerStatus !==
+        SMART_BREAK_TIMER_STATUS
+          .RUNNING ||
+      !breakTimerRuntime ||
+      !smartBreakSelection
+    ) {
+      return;
+    }
+
+
+    setBreakTimerError(
+      ""
+    );
+
+
+    const endedAtMs =
+      Date.now();
+
+
+    const finalRemainingSeconds =
+      calculateSmartBreakRemainingSeconds({
+        endAtMs:
+          breakTimerRuntime
+            .endAtMs,
+
+        currentTimeMs:
+          endedAtMs,
+      });
+
+
+    if (
+      finalRemainingSeconds ===
+      null
+    ) {
+      setBreakTimerError(
+        "CozyCram could not safely calculate the final Smart Break time."
+      );
+
+      return;
+    }
+
+
+    const reachedZero =
+      finalRemainingSeconds ===
+      0;
+
+
+    const endResult =
+      createSmartBreakEndSnapshot({
+        plannedDurationSeconds:
+          smartBreakSelection
+            .breakPlan
+            .durationSeconds,
+
+        remainingSeconds:
+          finalRemainingSeconds,
+
+        endedAtMs,
+
+        reason:
+          reachedZero
+            ? SMART_BREAK_END_REASON
+                .TIMER_COMPLETE
+            : SMART_BREAK_END_REASON
+                .USER_ENDED,
+      });
+
+
+    if (
+      !endResult.valid
+    ) {
+      setBreakTimerError(
+        endResult.error
+      );
+
+      return;
+    }
+
+
+    setBreakRemainingSeconds(
+      finalRemainingSeconds
+    );
+
+
+    setBreakEndSnapshot(
+      endResult.snapshot
+    );
+
+
+    setBreakTimerRuntime(
+      null
+    );
+
+
+    setBreakTimerStatus(
+      reachedZero
+        ? SMART_BREAK_TIMER_STATUS
+            .COMPLETE
+        : SMART_BREAK_TIMER_STATUS
+            .ENDED
+    );
+
+
+    setBreakEndConfirmationOpen(
+      false
     );
   };
 
@@ -2894,7 +3149,8 @@ const taskResultSummary =
       {smartBreakStartRequested &&
   (
     breakTimerIsRunning ||
-    breakTimerIsComplete
+    breakTimerIsComplete ||
+    breakTimerIsEnded
   ) && (
   <div
     className="focus-smart-break__timer"
@@ -2907,18 +3163,28 @@ const taskResultSummary =
         </small>
 
         <h3 id="focus-smart-break-timer-title">
-          {breakTimerIsRunning
-            ? "Break in progress"
-            : "Break complete"}
-        </h3>
+  {breakTimerIsRunning &&
+    "Break in progress"}
+
+  {breakTimerIsComplete &&
+    "Break complete"}
+
+  {breakTimerIsEnded &&
+    "Break ended"}
+</h3>
       </div>
 
 
       <span>
-        {breakTimerIsRunning
-          ? "Resting"
-          : "Complete"}
-      </span>
+  {breakTimerIsRunning &&
+    "Resting"}
+
+  {breakTimerIsComplete &&
+    "Complete"}
+
+  {breakTimerIsEnded &&
+    "Ended"}
+</span>
     </div>
 
 
@@ -2976,6 +3242,68 @@ const taskResultSummary =
       </div>
     )}
 
+{breakTimerIsRunning && (
+  <div className="focus-smart-break__timer-controls">
+    <button
+      type="button"
+      onClick={
+        handleRequestEndBreak
+      }
+    >
+      <Square
+        size={16}
+        strokeWidth={1.8}
+        aria-hidden="true"
+      />
+
+      End break
+    </button>
+  </div>
+)}
+
+{breakEndConfirmationOpen &&
+  breakTimerIsRunning && (
+  <div
+    className="focus-smart-break__end-confirmation"
+    role="group"
+    aria-labelledby="smart-break-end-title"
+  >
+    <div>
+      <strong id="smart-break-end-title">
+        End your Smart Break now?
+      </strong>
+
+      <p>
+        The break timer continues until
+        you confirm. You can also keep
+        resting and let it finish normally.
+      </p>
+    </div>
+
+
+    <div className="focus-smart-break__end-actions">
+      <button
+        type="button"
+        onClick={
+          handleKeepBreak
+        }
+      >
+        Keep break
+      </button>
+
+
+      <button
+        type="button"
+        className="focus-smart-break__end-now"
+        onClick={
+          handleConfirmEndBreak
+        }
+      >
+        End now
+      </button>
+    </div>
+  </div>
+)}
 
     {breakTimerIsComplete && (
       <div
@@ -3002,6 +3330,47 @@ const taskResultSummary =
       </div>
     )}
 
+{breakTimerIsEnded &&
+  breakEndSnapshot && (
+  <div
+    className="focus-smart-break__timer-notice"
+    role="status"
+    aria-live="polite"
+  >
+    <Square
+      size={18}
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
+
+    <div>
+      <strong>
+        Smart Break ended
+      </strong>
+
+      <p>
+        You took approximately{" "}
+        {
+          formatTimerClock(
+            breakEndSnapshot
+              .elapsedSeconds
+          )
+        }
+        {" "}
+        of this break.
+        {" "}
+        {
+          formatTimerClock(
+            breakEndSnapshot
+              .remainingSeconds
+          )
+        }
+        {" "}
+        remained.
+      </p>
+    </div>
+  </div>
+)}
 
     {breakTimerError && (
       <div
@@ -3142,6 +3511,59 @@ const taskResultSummary =
             .error
         }
       </span>
+    </div>
+  </section>
+)}
+{canContinueAfterBreak && (
+  <section
+    className="focus-smart-break-next"
+    aria-labelledby="focus-smart-break-next-title"
+  >
+    <div>
+      <p>
+        NEXT STEP
+      </p>
+
+      <h2 id="focus-smart-break-next-title">
+        Ready when you are
+      </h2>
+
+      <span>
+        {smartBreakSkipped
+          ? "You chose to continue without starting this Smart Break."
+          : breakTimerIsComplete
+            ? "Your Smart Break reached its planned end."
+            : "You ended this Smart Break early."}
+      </span>
+    </div>
+
+
+    <div className="focus-smart-break-next__actions">
+      <Link
+        to="/focus"
+        className="focus-smart-break-next__primary"
+      >
+        <Timer
+          size={17}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        Back to Focus
+      </Link>
+
+
+      <Link
+        to={`/planner/tasks/${sessionDraft.task.id}`}
+      >
+        View task
+
+        <ArrowRight
+          size={16}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+      </Link>
     </div>
   </section>
 )}

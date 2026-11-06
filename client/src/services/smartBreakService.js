@@ -41,6 +41,17 @@ export const SMART_BREAK_TIMER_STATUS = {
 
   COMPLETE:
     "complete",
+
+  ENDED:
+    "ended",
+};
+
+export const SMART_BREAK_END_REASON = {
+  TIMER_COMPLETE:
+    "timer_complete",
+
+  USER_ENDED:
+    "user_ended",
 };
 
 export const SMART_BREAK_REASON = {
@@ -914,4 +925,130 @@ export const calculateSmartBreakRemainingSeconds = ({
     remainingMilliseconds /
       1000
   );
+};
+
+export const createSmartBreakEndSnapshot = ({
+  plannedDurationSeconds,
+  remainingSeconds,
+  endedAtMs,
+  reason,
+}) => {
+  const safePlannedDurationSeconds =
+    Number(
+      plannedDurationSeconds
+    );
+
+
+  const safeRemainingSeconds =
+    Number(
+      remainingSeconds
+    );
+
+
+  const safeEndedAtMs =
+    Number(
+      endedAtMs
+    );
+
+
+  if (
+    !Number.isInteger(
+      safePlannedDurationSeconds
+    ) ||
+    safePlannedDurationSeconds <= 0
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break ending requires a valid planned duration.",
+
+      snapshot: null,
+    };
+  }
+
+
+  if (
+    !Number.isInteger(
+      safeRemainingSeconds
+    ) ||
+    safeRemainingSeconds < 0 ||
+    safeRemainingSeconds >
+      safePlannedDurationSeconds
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break ending received an invalid remaining-time value.",
+
+      snapshot: null,
+    };
+  }
+
+
+  if (
+    !Number.isFinite(
+      safeEndedAtMs
+    ) ||
+    safeEndedAtMs < 0
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break ending requires a valid explicit end time.",
+
+      snapshot: null,
+    };
+  }
+
+
+  if (
+    !Object.values(
+      SMART_BREAK_END_REASON
+    ).includes(
+      reason
+    )
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break ending requires a valid end reason.",
+
+      snapshot: null,
+    };
+  }
+
+
+  const elapsedSeconds =
+    safePlannedDurationSeconds -
+    safeRemainingSeconds;
+
+
+  return {
+    valid: true,
+
+    error: "",
+
+    snapshot: {
+      plannedDurationSeconds:
+        safePlannedDurationSeconds,
+
+      remainingSeconds:
+        safeRemainingSeconds,
+
+      elapsedSeconds,
+
+      endedAtMs:
+        safeEndedAtMs,
+
+      reason,
+
+      reachedZero:
+        safeRemainingSeconds ===
+        0,
+    },
+  };
 };
