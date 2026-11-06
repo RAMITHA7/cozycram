@@ -54,6 +54,17 @@ export const SMART_BREAK_END_REASON = {
     "user_ended",
 };
 
+export const SMART_BREAK_OUTCOME = {
+  COMPLETED:
+    "completed",
+
+  ENDED_EARLY:
+    "ended_early",
+
+  SKIPPED:
+    "skipped",
+};
+
 export const SMART_BREAK_REASON = {
   FOCUS_COMPLETED:
     "focus_completed",
@@ -1050,5 +1061,432 @@ export const createSmartBreakEndSnapshot = ({
         safeRemainingSeconds ===
         0,
     },
+  };
+};
+
+export const createSmartBreakOutcomeSummary = ({
+  selection,
+  endSnapshot,
+  timerStatus,
+}) => {
+  if (
+    !selection ||
+    typeof selection !==
+      "object"
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break outcome requires a valid break selection.",
+
+      summary: null,
+    };
+  }
+
+
+  if (
+    !Object.values(
+      SMART_BREAK_READY_ACTION
+    ).includes(
+      selection.action
+    )
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break outcome received an unsupported break action.",
+
+      summary: null,
+    };
+  }
+
+
+  const durationMinutes =
+    Number(
+      selection
+        .breakPlan
+        ?.durationMinutes
+    );
+
+
+  const durationSeconds =
+    Number(
+      selection
+        .breakPlan
+        ?.durationSeconds
+    );
+
+
+  if (
+    !Number.isInteger(
+      durationMinutes
+    ) ||
+    durationMinutes <= 0 ||
+    !Number.isInteger(
+      durationSeconds
+    ) ||
+    durationSeconds !==
+      durationMinutes * 60
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break outcome received invalid planned break duration.",
+
+      summary: null,
+    };
+  }
+
+
+  if (
+    selection.action ===
+      SMART_BREAK_READY_ACTION
+        .CONTINUE_WITHOUT_BREAK
+  ) {
+    if (
+      timerStatus !==
+        SMART_BREAK_TIMER_STATUS
+          .IDLE
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "A skipped Smart Break cannot have an active or completed break timer.",
+
+        summary: null,
+      };
+    }
+
+
+    if (
+      endSnapshot !== null &&
+      endSnapshot !== undefined
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "A skipped Smart Break cannot contain a break-end result.",
+
+        summary: null,
+      };
+    }
+
+
+    return {
+      valid: true,
+
+      error: "",
+
+      summary: {
+        outcome:
+          SMART_BREAK_OUTCOME
+            .SKIPPED,
+
+        plannedDurationMinutes:
+          durationMinutes,
+
+        plannedDurationSeconds:
+          durationSeconds,
+
+        elapsedSeconds:
+          0,
+
+        remainingSeconds:
+          durationSeconds,
+
+        reachedZero:
+          false,
+
+        endedAtMs:
+          null,
+
+        focusPreset:
+          selection
+            .breakPlan
+            .focusPreset,
+
+        taskId:
+          selection
+            .sourceFocus
+            ?.taskId,
+      },
+    };
+  }
+
+
+  if (
+    selection.action !==
+      SMART_BREAK_READY_ACTION
+        .START_BREAK
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break outcome requires a supported final action.",
+
+      summary: null,
+    };
+  }
+
+
+  if (
+    !endSnapshot ||
+    typeof endSnapshot !==
+      "object"
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "A started Smart Break requires a final break result.",
+
+      summary: null,
+    };
+  }
+
+
+  const plannedDurationSeconds =
+    Number(
+      endSnapshot
+        .plannedDurationSeconds
+    );
+
+
+  const remainingSeconds =
+    Number(
+      endSnapshot
+        .remainingSeconds
+    );
+
+
+  const elapsedSeconds =
+    Number(
+      endSnapshot
+        .elapsedSeconds
+    );
+
+
+  const endedAtMs =
+    Number(
+      endSnapshot
+        .endedAtMs
+    );
+
+
+  if (
+    !Number.isInteger(
+      plannedDurationSeconds
+    ) ||
+    plannedDurationSeconds !==
+      durationSeconds
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break outcome does not match the selected break duration.",
+
+      summary: null,
+    };
+  }
+
+
+  if (
+    !Number.isInteger(
+      remainingSeconds
+    ) ||
+    remainingSeconds < 0 ||
+    remainingSeconds >
+      durationSeconds
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break outcome contains invalid remaining time.",
+
+      summary: null,
+    };
+  }
+
+
+  if (
+    !Number.isInteger(
+      elapsedSeconds
+    ) ||
+    elapsedSeconds < 0 ||
+    elapsedSeconds >
+      durationSeconds
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break outcome contains invalid elapsed time.",
+
+      summary: null,
+    };
+  }
+
+
+  if (
+    elapsedSeconds +
+      remainingSeconds !==
+    durationSeconds
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break outcome contains inconsistent time accounting.",
+
+      summary: null,
+    };
+  }
+
+
+  if (
+    !Number.isFinite(
+      endedAtMs
+    ) ||
+    endedAtMs < 0
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break outcome requires a valid explicit end time.",
+
+      summary: null,
+    };
+  }
+
+
+  const completedNaturally =
+    timerStatus ===
+      SMART_BREAK_TIMER_STATUS
+        .COMPLETE &&
+    endSnapshot.reason ===
+      SMART_BREAK_END_REASON
+        .TIMER_COMPLETE &&
+    remainingSeconds ===
+      0 &&
+    elapsedSeconds ===
+      durationSeconds &&
+    endSnapshot.reachedZero ===
+      true;
+
+
+  if (
+    completedNaturally
+  ) {
+    return {
+      valid: true,
+
+      error: "",
+
+      summary: {
+        outcome:
+          SMART_BREAK_OUTCOME
+            .COMPLETED,
+
+        plannedDurationMinutes:
+          durationMinutes,
+
+        plannedDurationSeconds:
+          durationSeconds,
+
+        elapsedSeconds,
+
+        remainingSeconds,
+
+        reachedZero:
+          true,
+
+        endedAtMs,
+
+        focusPreset:
+          selection
+            .breakPlan
+            .focusPreset,
+
+        taskId:
+          selection
+            .sourceFocus
+            ?.taskId,
+      },
+    };
+  }
+
+
+  const endedEarly =
+    timerStatus ===
+      SMART_BREAK_TIMER_STATUS
+        .ENDED &&
+    endSnapshot.reason ===
+      SMART_BREAK_END_REASON
+        .USER_ENDED &&
+    remainingSeconds > 0 &&
+    elapsedSeconds <
+      durationSeconds &&
+    endSnapshot.reachedZero ===
+      false;
+
+
+  if (
+    endedEarly
+  ) {
+    return {
+      valid: true,
+
+      error: "",
+
+      summary: {
+        outcome:
+          SMART_BREAK_OUTCOME
+            .ENDED_EARLY,
+
+        plannedDurationMinutes:
+          durationMinutes,
+
+        plannedDurationSeconds:
+          durationSeconds,
+
+        elapsedSeconds,
+
+        remainingSeconds,
+
+        reachedZero:
+          false,
+
+        endedAtMs,
+
+        focusPreset:
+          selection
+            .breakPlan
+            .focusPreset,
+
+        taskId:
+          selection
+            .sourceFocus
+            ?.taskId,
+      },
+    };
+  }
+
+
+  return {
+    valid: false,
+
+    error:
+      "Smart Break outcome does not match a supported completed, ended, or skipped state.",
+
+    summary: null,
   };
 };

@@ -2259,10 +2259,14 @@ button:focus-visible {
     var(--color-on-brand);
 }
 
-.focus-smart-break-next {
+
+/* =========================================================
+   SMART BREAK RESULT
+   ========================================================= */
+
+.focus-smart-break-result {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
 
   gap:
     var(--space-5);
@@ -2282,15 +2286,49 @@ button:focus-visible {
 }
 
 
-.focus-smart-break-next
-> div:first-child {
+.focus-smart-break-result__heading {
+  display: flex;
+  align-items: flex-start;
+
+  gap:
+    var(--space-4);
+}
+
+
+.focus-smart-break-result__icon {
+  width: 50px;
+  height: 50px;
+
+  flex:
+    0 0 auto;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--color-brand) 10%,
+      transparent
+    );
+
+  color:
+    var(--color-brand);
+}
+
+
+.focus-smart-break-result__heading
+> div:last-child {
   min-width: 0;
 }
 
 
-.focus-smart-break-next
-> div:first-child
-> p {
+.focus-smart-break-result__heading
+p {
   margin-bottom:
     var(--space-1);
 
@@ -2308,18 +2346,21 @@ button:focus-visible {
 }
 
 
-.focus-smart-break-next
+.focus-smart-break-result__heading
 h2 {
+  overflow-wrap:
+    anywhere;
+
   font-size:
     var(--text-heading-lg);
 }
 
 
-.focus-smart-break-next
+.focus-smart-break-result__heading
 span {
   display: block;
 
-  max-width: 600px;
+  max-width: 700px;
 
   margin-top:
     var(--space-2);
@@ -2330,10 +2371,162 @@ span {
   font-size:
     var(--text-body-sm);
 
+  line-height: 1.55;
+}
+.focus-smart-break-result__summary {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(0, 1fr)
+    );
+
+  gap:
+    var(--space-3);
+}
+
+
+.focus-smart-break-result__summary
+article {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-1);
+
+  padding:
+    var(--space-3);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+}
+
+
+.focus-smart-break-result__summary
+span {
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
+
+
+.focus-smart-break-result__summary
+strong {
+  overflow-wrap:
+    anywhere;
+
+  font-size:
+    var(--text-heading-sm);
+
+  font-variant-numeric:
+    tabular-nums;
+}
+
+
+.focus-smart-break-result__summary
+small {
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-caption);
+}
+.focus-smart-break-result__notice {
+  display: flex;
+  align-items: flex-start;
+
+  gap:
+    var(--space-3);
+
+  padding:
+    var(--space-4);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+}
+
+
+.focus-smart-break-result__notice
+> svg {
+  flex:
+    0 0 auto;
+
+  color:
+    var(--color-brand);
+}
+
+
+.focus-smart-break-result__notice
+p {
+  margin-top:
+    var(--space-1);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+
+  line-height: 1.5;
+}
+.focus-smart-break-result__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap:
+    var(--space-4);
+
+  padding-top:
+    var(--space-4);
+
+  border-top:
+    1px solid
+    var(--color-divider);
+}
+
+
+.focus-smart-break-result__footer
+> div:first-child {
+  min-width: 0;
+}
+
+
+.focus-smart-break-result__footer
+p {
+  margin-top:
+    var(--space-1);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+
   line-height: 1.5;
 }
 
-.focus-smart-break-next__actions {
+
+.focus-smart-break-result__actions {
   flex:
     0 0 auto;
 
@@ -2345,7 +2538,7 @@ span {
 }
 
 
-.focus-smart-break-next__actions
+.focus-smart-break-result__actions
 a {
   min-height: 44px;
 
@@ -2380,7 +2573,7 @@ a {
 }
 
 
-.focus-smart-break-next__actions
+.focus-smart-break-result__actions
 a:hover {
   border-color:
     var(--color-brand);
@@ -2390,7 +2583,7 @@ a:hover {
 }
 
 
-.focus-smart-break-next__actions
+.focus-smart-break-result__actions
 a:focus-visible {
   outline:
     2px solid
@@ -2401,8 +2594,8 @@ a:focus-visible {
 }
 
 
-.focus-smart-break-next__actions
-.focus-smart-break-next__primary {
+.focus-smart-break-result__actions
+.focus-smart-break-result__primary {
   border-color:
     var(--color-brand);
 
@@ -2414,10 +2607,66 @@ a:focus-visible {
 }
 
 
-.focus-smart-break-next__actions
-.focus-smart-break-next__primary:hover {
+.focus-smart-break-result__actions
+.focus-smart-break-result__primary:hover {
   color:
     var(--color-on-brand);
+}
+.focus-smart-break-result--error {
+  flex-direction:
+    row;
+
+  align-items:
+    flex-start;
+}
+
+
+.focus-smart-break-result--error
+> svg {
+  flex:
+    0 0 auto;
+
+  color:
+    var(--color-brand);
+}
+
+
+.focus-smart-break-result--error
+> div {
+  min-width: 0;
+}
+
+
+.focus-smart-break-result--error
+p {
+  margin-bottom:
+    var(--space-1);
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-overline);
+
+  font-weight:
+    var(--font-weight-semibold);
+
+  letter-spacing:
+    0.08em;
+}
+
+
+.focus-smart-break-result--error
+span {
+  display: block;
+
+  margin-top:
+    var(--space-2);
+
+  color:
+    var(--color-text-secondary);
+
+  line-height: 1.5;
 }
 
 /* =========================================================
@@ -2749,20 +2998,28 @@ button {
     1 1 0;
 }
 
-
-.focus-smart-break-next {
-  align-items:
-    stretch;
-
-  flex-direction:
-    column;
-
+.focus-smart-break-result {
   padding:
     var(--space-4);
 }
 
 
-.focus-smart-break-next__actions {
+.focus-smart-break-result__summary {
+  grid-template-columns:
+    1fr;
+}
+
+
+.focus-smart-break-result__footer {
+  align-items:
+    stretch;
+
+  flex-direction:
+    column;
+}
+
+
+.focus-smart-break-result__actions {
   width: 100%;
 
   flex-direction:
@@ -2770,12 +3027,11 @@ button {
 }
 
 
-.focus-smart-break-next__actions
+.focus-smart-break-result__actions
 a {
   width: 100%;
 }
 }
-
 
 @media (
   max-width: 420px
@@ -2891,10 +3147,20 @@ button {
   width: 100%;
 }
 
-
-.focus-smart-break-next {
+.focus-smart-break-result {
   padding:
     var(--space-3);
 }
 
+
+.focus-smart-break-result__heading {
+  flex-direction:
+    column;
+}
+
+
+.focus-smart-break-result--error {
+  flex-direction:
+    column;
+}
 }

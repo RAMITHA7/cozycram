@@ -46,10 +46,12 @@ import {
   calculateSmartBreakRemainingSeconds,
   createSmartBreakEndSnapshot,
   createSmartBreakHandoff,
+  createSmartBreakOutcomeSummary,
   createSmartBreakReadySelection,
   createSmartBreakTimerRuntime,
   evaluateSmartBreakEligibility,
   SMART_BREAK_END_REASON,
+  SMART_BREAK_OUTCOME,
   SMART_BREAK_READY_ACTION,
   SMART_BREAK_STATUS,
   SMART_BREAK_TIMER_STATUS,
@@ -1496,9 +1498,65 @@ const breakHasFinished =
   breakTimerIsComplete ||
   breakTimerIsEnded;
 
-  const canContinueAfterBreak =
+  const smartBreakHasFinalOutcome =
   smartBreakSkipped ||
   breakHasFinished;
+
+
+const smartBreakOutcomeResult =
+  smartBreakHasFinalOutcome &&
+  smartBreakSelection
+    ? createSmartBreakOutcomeSummary({
+        selection:
+          smartBreakSelection,
+
+        endSnapshot:
+          smartBreakSkipped
+            ? null
+            : breakEndSnapshot,
+
+        timerStatus:
+          breakTimerStatus,
+      })
+    : null;
+
+
+const smartBreakOutcome =
+  smartBreakOutcomeResult
+    ?.valid
+    ? smartBreakOutcomeResult
+        .summary
+    : null;
+
+
+const smartBreakOutcomeError =
+  smartBreakHasFinalOutcome &&
+  smartBreakOutcomeResult &&
+  !smartBreakOutcomeResult
+    .valid
+    ? smartBreakOutcomeResult
+        .error
+    : "";
+
+    const smartBreakWasCompleted =
+  smartBreakOutcome
+    ?.outcome ===
+  SMART_BREAK_OUTCOME
+    .COMPLETED;
+
+
+const smartBreakWasEndedEarly =
+  smartBreakOutcome
+    ?.outcome ===
+  SMART_BREAK_OUTCOME
+    .ENDED_EARLY;
+
+
+const smartBreakWasSkipped =
+  smartBreakOutcome
+    ?.outcome ===
+  SMART_BREAK_OUTCOME
+    .SKIPPED;
 
     const handleSmartBreakSelection =
   (
@@ -3514,56 +3572,233 @@ const taskResultSummary =
     </div>
   </section>
 )}
-{canContinueAfterBreak && (
+{smartBreakOutcome && (
   <section
-    className="focus-smart-break-next"
-    aria-labelledby="focus-smart-break-next-title"
+    className="focus-smart-break-result"
+    aria-labelledby="focus-smart-break-result-title"
   >
-    <div>
-      <p>
-        NEXT STEP
-      </p>
+    <div className="focus-smart-break-result__heading">
+      <div
+        className="focus-smart-break-result__icon"
+        aria-hidden="true"
+      >
+        {smartBreakWasCompleted ? (
+          <CheckCircle2
+            size={25}
+            strokeWidth={1.8}
+          />
+        ) : smartBreakWasEndedEarly ? (
+          <Square
+            size={22}
+            strokeWidth={1.8}
+          />
+        ) : (
+          <ArrowRight
+            size={23}
+            strokeWidth={1.8}
+          />
+        )}
+      </div>
 
-      <h2 id="focus-smart-break-next-title">
-        Ready when you are
-      </h2>
 
-      <span>
-        {smartBreakSkipped
-          ? "You chose to continue without starting this Smart Break."
-          : breakTimerIsComplete
-            ? "Your Smart Break reached its planned end."
-            : "You ended this Smart Break early."}
-      </span>
+      <div>
+        <p>
+          SMART BREAK RESULT
+        </p>
+
+        <h2 id="focus-smart-break-result-title">
+          {smartBreakWasCompleted &&
+            "Break complete"}
+
+          {smartBreakWasEndedEarly &&
+            "Break ended early"}
+
+          {smartBreakWasSkipped &&
+            "Break skipped"}
+        </h2>
+
+        <span>
+          {smartBreakWasCompleted &&
+            "Your Smart Break reached its full saved duration."}
+
+          {smartBreakWasEndedEarly &&
+            "You chose to continue before the full Smart Break finished."}
+
+          {smartBreakWasSkipped &&
+            "You chose to continue without starting the Smart Break."}
+        </span>
+      </div>
     </div>
 
 
-    <div className="focus-smart-break-next__actions">
-      <Link
-        to="/focus"
-        className="focus-smart-break-next__primary"
-      >
-        <Timer
-          size={17}
-          strokeWidth={1.8}
-          aria-hidden="true"
-        />
+    <div
+      className="focus-smart-break-result__summary"
+      aria-label="Smart Break result summary"
+    >
+      <article>
+        <span>
+          Planned break
+        </span>
 
-        Back to Focus
-      </Link>
+        <strong>
+          {
+            formatTimerClock(
+              smartBreakOutcome
+                .plannedDurationSeconds
+            )
+          }
+        </strong>
+
+        <small>
+          Saved Focus preference
+        </small>
+      </article>
 
 
-      <Link
-        to={`/planner/tasks/${sessionDraft.task.id}`}
-      >
-        View task
+      <article>
+        <span>
+          Break taken
+        </span>
 
-        <ArrowRight
-          size={16}
-          strokeWidth={1.8}
-          aria-hidden="true"
-        />
-      </Link>
+        <strong>
+          {
+            formatTimerClock(
+              smartBreakOutcome
+                .elapsedSeconds
+            )
+          }
+        </strong>
+
+        <small>
+          {
+            smartBreakWasSkipped
+              ? "Break was not started"
+              : "Actual break time"
+          }
+        </small>
+      </article>
+
+
+      <article>
+        <span>
+          Break remaining
+        </span>
+
+        <strong>
+          {
+            formatTimerClock(
+              smartBreakOutcome
+                .remainingSeconds
+            )
+          }
+        </strong>
+
+        <small>
+          {
+            smartBreakWasCompleted
+              ? "Reached zero"
+              : "Unused break time"
+          }
+        </small>
+      </article>
+    </div>
+
+
+    <div
+      className="focus-smart-break-result__notice"
+      role="status"
+      aria-live="polite"
+    >
+      <Coffee
+        size={19}
+        strokeWidth={1.8}
+        aria-hidden="true"
+      />
+
+      <div>
+        <strong>
+          Your next step is still yours.
+        </strong>
+
+        <p>
+          CozyCram does not automatically
+          start another Focus session after
+          a break.
+        </p>
+      </div>
+    </div>
+
+
+    <div className="focus-smart-break-result__footer">
+      <div>
+        <strong>
+          Ready to continue?
+        </strong>
+
+        <p>
+          Return to Focus to choose the
+          next task and duration, or review
+          the task from the session you
+          just finished.
+        </p>
+      </div>
+
+
+      <div className="focus-smart-break-result__actions">
+        <Link
+          to="/focus"
+          className="focus-smart-break-result__primary"
+        >
+          <Timer
+            size={17}
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
+
+          Back to Focus
+        </Link>
+
+
+        <Link
+          to={`/planner/tasks/${sessionDraft.task.id}`}
+        >
+          View task
+
+          <ArrowRight
+            size={16}
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
+        </Link>
+      </div>
+    </div>
+  </section>
+)}
+{smartBreakOutcomeError && (
+  <section
+    className="focus-smart-break-result focus-smart-break-result--error"
+    role="alert"
+    aria-labelledby="focus-smart-break-result-error-title"
+  >
+    <CircleAlert
+      size={24}
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
+
+
+    <div>
+      <p>
+        SMART BREAK RESULT
+      </p>
+
+      <h2 id="focus-smart-break-result-error-title">
+        Break result unavailable
+      </h2>
+
+      <span>
+        {smartBreakOutcomeError}
+      </span>
     </div>
   </section>
 )}
