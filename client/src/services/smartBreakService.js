@@ -10,6 +10,8 @@ import {
 export const SMART_BREAK_VERSION =
   1;
 
+export const SMART_BREAK_HANDOFF_VERSION =
+  1;
 
 export const SMART_BREAK_STATUS = {
   ELIGIBLE:
@@ -414,5 +416,237 @@ export const evaluateSmartBreakEligibility = ({
         message:
           `Focus complete. Your saved ${breakMinutes}-minute break is ready.`,
       }),
+  };
+};
+
+export const createSmartBreakHandoff = ({
+  decision,
+  sessionEndSnapshot,
+  taskId,
+}) => {
+  if (
+    !decision ||
+    typeof decision !==
+      "object"
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break handoff requires an eligibility decision.",
+
+      handoff: null,
+    };
+  }
+
+
+  if (
+    decision.version !==
+      SMART_BREAK_VERSION
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break handoff received an unsupported decision version.",
+
+      handoff: null,
+    };
+  }
+
+
+  if (
+    decision.status !==
+      SMART_BREAK_STATUS
+        .ELIGIBLE ||
+    decision.eligible !== true ||
+    decision.reason !==
+      SMART_BREAK_REASON
+        .FOCUS_COMPLETED
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Only an eligible completed Focus session can create a Smart Break handoff.",
+
+      handoff: null,
+    };
+  }
+
+
+  const sessionValidation =
+    validateSessionEndSnapshot(
+      sessionEndSnapshot
+    );
+
+
+  if (
+    !sessionValidation.valid
+  ) {
+    return {
+      valid: false,
+
+      error:
+        sessionValidation.error,
+
+      handoff: null,
+    };
+  }
+
+
+  const completedNaturally =
+    sessionEndSnapshot
+      .reason ===
+      FOCUS_SESSION_END_REASON
+        .TIMER_COMPLETE &&
+    sessionEndSnapshot
+      .remainingSeconds ===
+      0 &&
+    sessionEndSnapshot
+      .elapsedSeconds ===
+      sessionEndSnapshot
+        .plannedDurationSeconds &&
+    sessionEndSnapshot
+      .reachedZero ===
+      true;
+
+
+  if (
+    !completedNaturally
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break handoff requires a Focus timer that reached its planned end.",
+
+      handoff: null,
+    };
+  }
+
+
+  const breakMinutes =
+    Number(
+      decision.breakMinutes
+    );
+
+
+  const breakSeconds =
+    Number(
+      decision.breakSeconds
+    );
+
+
+  if (
+    !Number.isInteger(
+      breakMinutes
+    ) ||
+    breakMinutes <= 0
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break handoff requires a positive saved break duration.",
+
+      handoff: null,
+    };
+  }
+
+
+  if (
+    !Number.isInteger(
+      breakSeconds
+    ) ||
+    breakSeconds !==
+      breakMinutes * 60
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break handoff received inconsistent break-duration accounting.",
+
+      handoff: null,
+    };
+  }
+
+
+  const normalizedTaskId =
+    String(
+      taskId ?? ""
+    ).trim();
+
+
+  if (
+    !normalizedTaskId
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break handoff requires the completed Focus task.",
+
+      handoff: null,
+    };
+  }
+
+
+  const focusEndedAtMs =
+    Number(
+      sessionEndSnapshot
+        .endedAtMs
+    );
+
+
+  if (
+    !Number.isFinite(
+      focusEndedAtMs
+    ) ||
+    focusEndedAtMs < 0
+  ) {
+    return {
+      valid: false,
+
+      error:
+        "Smart Break handoff requires a valid Focus completion time.",
+
+      handoff: null,
+    };
+  }
+
+
+  return {
+    valid: true,
+
+    error: "",
+
+    handoff: {
+      version:
+        SMART_BREAK_HANDOFF_VERSION,
+
+      sourceFocus: {
+        taskId,
+
+        endedAtMs:
+          focusEndedAtMs,
+
+        endReason:
+          sessionEndSnapshot
+            .reason,
+      },
+
+      breakPlan: {
+        durationMinutes:
+          breakMinutes,
+
+        durationSeconds:
+          breakSeconds,
+
+        focusPreset:
+          decision.focusPreset,
+      },
+    },
   };
 };

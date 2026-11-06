@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   CircleAlert,
   Clock3,
+  Coffee,
   Pause,
   Play,
   ShieldCheck,
@@ -40,6 +41,12 @@ import {
   FOCUS_TIMER_STATUS,
   validateFocusSessionHandoff,
 } from "../../services/focusSessionService.js";
+
+import {
+  createSmartBreakHandoff,
+  evaluateSmartBreakEligibility,
+  SMART_BREAK_STATUS,
+} from "../../services/smartBreakService.js";
 
 import "./focusSession.css";
 
@@ -1057,6 +1064,83 @@ const timerIsActive =
     timerIsEnded
   );
 
+const smartBreakEligibilityResult =
+  sessionHasEnded
+    ? evaluateSmartBreakEligibility({
+        preferences:
+          studyData
+            ?.preferences,
+
+        sessionEndSnapshot,
+      })
+    : null;
+
+
+const smartBreakDecision =
+  smartBreakEligibilityResult
+    ?.decision ??
+  null;
+
+  const smartBreakHandoffResult =
+  smartBreakDecision
+    ?.eligible &&
+  sessionDraft
+    ? createSmartBreakHandoff({
+        decision:
+          smartBreakDecision,
+
+        sessionEndSnapshot,
+
+        taskId:
+          sessionDraft
+            .task
+            .id,
+      })
+    : null;
+
+
+const smartBreakHandoff =
+  smartBreakHandoffResult
+    ?.valid
+    ? smartBreakHandoffResult
+        .handoff
+    : null;
+
+    const smartBreakCanBeShown =
+  timerIsComplete &&
+  Boolean(
+    sessionEndSnapshot
+  );
+
+
+const smartBreakIsReady =
+  smartBreakCanBeShown &&
+  smartBreakEligibilityResult
+    ?.valid === true &&
+  smartBreakDecision
+    ?.status ===
+    SMART_BREAK_STATUS
+      .ELIGIBLE &&
+  Boolean(
+    smartBreakHandoff
+  );
+
+
+const smartBreakIsDisabled =
+  smartBreakCanBeShown &&
+  smartBreakEligibilityResult
+    ?.valid === true &&
+  smartBreakDecision
+    ?.status ===
+    SMART_BREAK_STATUS
+      .DISABLED;
+
+
+const smartBreakHasError =
+  smartBreakCanBeShown &&
+  smartBreakEligibilityResult &&
+  smartBreakEligibilityResult
+    .valid === false;
 
 const taskResultSummaryResult =
   sessionHasEnded &&
@@ -2238,6 +2322,164 @@ const taskResultSummary =
           </Link>
         </div>
       )}
+    </div>
+  </section>
+)}
+{smartBreakIsReady && (
+  <section
+    className="focus-smart-break"
+    aria-labelledby="focus-smart-break-title"
+  >
+    <div
+      className="focus-smart-break__icon"
+      aria-hidden="true"
+    >
+      <Coffee
+        size={26}
+        strokeWidth={1.8}
+      />
+    </div>
+
+
+    <div className="focus-smart-break__content">
+      <p>
+        SMART BREAK
+      </p>
+
+      <h2 id="focus-smart-break-title">
+        {
+          smartBreakHandoff
+            .breakPlan
+            .durationMinutes
+        }
+        -minute break ready
+      </h2>
+
+      <span>
+        Your Focus timer reached its
+        planned end, so CozyCram prepared
+        the break saved with your Focus
+        preference.
+      </span>
+
+
+      <div className="focus-smart-break__meta">
+        <div>
+          <small>
+            Saved break
+          </small>
+
+          <strong>
+            {
+              formatDuration(
+                smartBreakHandoff
+                  .breakPlan
+                  .durationMinutes
+              )
+            }
+          </strong>
+        </div>
+
+
+        <div>
+          <small>
+            Focus preset
+          </small>
+
+          <strong>
+            {
+              formatDurationOption(
+                smartBreakHandoff
+                  .breakPlan
+                  .focusPreset
+              )
+            }
+          </strong>
+        </div>
+      </div>
+
+
+      <div
+        className="focus-smart-break__notice"
+        role="status"
+        aria-live="polite"
+      >
+        <Coffee
+          size={18}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        <p>
+          Break ready. The break countdown
+          has not started yet.
+        </p>
+      </div>
+    </div>
+  </section>
+)}
+{smartBreakIsDisabled && (
+  <section
+    className="focus-smart-break focus-smart-break--muted"
+    aria-labelledby="focus-smart-break-disabled-title"
+  >
+    <div
+      className="focus-smart-break__icon"
+      aria-hidden="true"
+    >
+      <Coffee
+        size={26}
+        strokeWidth={1.8}
+      />
+    </div>
+
+
+    <div className="focus-smart-break__content">
+      <p>
+        SMART BREAK
+      </p>
+
+      <h2 id="focus-smart-break-disabled-title">
+        No saved break for this rhythm
+      </h2>
+
+      <span>
+        {
+          smartBreakDecision
+            .message
+        }
+      </span>
+    </div>
+  </section>
+)}
+{smartBreakHasError && (
+  <section
+    className="focus-smart-break focus-smart-break--error"
+    role="alert"
+    aria-labelledby="focus-smart-break-error-title"
+  >
+    <CircleAlert
+      size={24}
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
+
+
+    <div className="focus-smart-break__content">
+      <p>
+        SMART BREAK
+      </p>
+
+      <h2 id="focus-smart-break-error-title">
+        Break unavailable
+      </h2>
+
+      <span>
+        {
+          smartBreakEligibilityResult
+            .error
+        }
+      </span>
     </div>
   </section>
 )}
