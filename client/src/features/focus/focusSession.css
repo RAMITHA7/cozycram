@@ -18,6 +18,8 @@
 
   gap:
     var(--space-6);
+
+  text-align: left;
 }
 
 
