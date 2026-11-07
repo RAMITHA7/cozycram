@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Square,
   Timer,
+  Sparkles,
 } from "lucide-react";
 
 import {
@@ -59,6 +60,9 @@ import {
 
 import "./focusSession.css";
 
+import {
+  getSavedCornerEnvironment,
+} from "../../services/cornerEnvironmentService.js";
 
 const DATE_KEY_PATTERN =
   /^\d{4}-\d{2}-\d{2}$/;
@@ -339,6 +343,12 @@ function FocusSessionPageContent({
   const loadError =
     initialData.error;
 
+const savedCornerEnvironment =
+  !loadError
+    ? getSavedCornerEnvironment(
+        studyData
+      )
+    : null;
 
   const focusSetup =
     location.state
@@ -2220,6 +2230,91 @@ const taskResultSummary =
         </div>
       </header>
 
+{savedCornerEnvironment && (
+  <section
+    className={`focus-session-atmosphere focus-session-atmosphere--${savedCornerEnvironment.visualKey}`}
+    aria-labelledby="focus-session-atmosphere-title"
+  >
+    <div
+      className="focus-session-atmosphere__scene"
+      aria-hidden="true"
+    >
+      <Sparkles
+        size={34}
+        strokeWidth={1.6}
+      />
+
+      <span>
+        {
+          savedCornerEnvironment
+            .name
+        }
+      </span>
+    </div>
+
+
+    <div className="focus-session-atmosphere__content">
+      <p>
+        MY CORNER ATMOSPHERE
+      </p>
+
+      <h2 id="focus-session-atmosphere-title">
+        {
+          savedCornerEnvironment
+            .name
+        }
+      </h2>
+
+      <strong>
+        {
+          savedCornerEnvironment
+            .atmosphere
+        }
+      </strong>
+
+      <span>
+        {
+          savedCornerEnvironment
+            .description
+        }
+      </span>
+
+      <small>
+        Visual only — this atmosphere
+        does not change your task,
+        duration, timer or Smart Break.
+      </small>
+    </div>
+
+
+    <div className="focus-session-atmosphere__action">
+      {timerIsActive ? (
+        <span className="focus-session-atmosphere__active-note">
+          <ShieldCheck
+            size={16}
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
+
+          Saved atmosphere
+        </span>
+      ) : (
+        <Link
+          to="/corner"
+          className="focus-session-atmosphere__link"
+        >
+          Change in My Corner
+
+          <ArrowRight
+            size={16}
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
+        </Link>
+      )}
+    </div>
+  </section>
+)}
 
       <section
         className="focus-session-card"
