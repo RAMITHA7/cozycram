@@ -1,4 +1,5 @@
 import {
+  ArrowRight,
   BookOpen,
   Building2,
   Check,
@@ -18,11 +19,16 @@ import {
 } from "react";
 
 import {
+  Link,
+} from "react-router-dom";
+
+import {
   loadStudyData,
   saveStudyData,
 } from "../../services/studyDataService.js";
 
 import {
+  createCornerEnvironmentPreferenceReset,
   createCornerEnvironmentPreferenceUpdate,
   getCornerEnvironmentById,
   getCornerEnvironmentCatalog,
@@ -113,6 +119,13 @@ const [
   ""
 );
 
+const [
+  resetConfirmationOpen,
+  setResetConfirmationOpen,
+] = useState(
+  false
+);
+
   const selectedEnvironment =
     selectedEnvironmentId
       ? getCornerEnvironmentById(
@@ -165,6 +178,10 @@ setSaveError(
 
 setSaveNotice(
   ""
+);
+
+setResetConfirmationOpen(
+  false
 );
 
       setSelectedEnvironmentId(
@@ -275,6 +292,9 @@ const handleSaveEnvironment =
         .id
     );
 
+    setResetConfirmationOpen(
+  false
+);
 
     setSaveNotice(
       `${updateResult.environment.name} is now your saved My Corner environment.`
@@ -302,6 +322,121 @@ const handleSaveEnvironment =
 
     setSaveNotice(
       "Saved environment restored to the preview."
+    );
+  };
+
+  const handleRequestEnvironmentReset =
+  () => {
+    if (
+      !savedEnvironment
+    ) {
+      return;
+    }
+
+
+    setSaveError(
+      ""
+    );
+
+
+    setSaveNotice(
+      ""
+    );
+
+
+    setResetConfirmationOpen(
+      true
+    );
+  };
+
+  const handleCancelEnvironmentReset =
+  () => {
+    setResetConfirmationOpen(
+      false
+    );
+  };
+  const handleConfirmEnvironmentReset =
+  () => {
+    setSaveError(
+      ""
+    );
+
+
+    setSaveNotice(
+      ""
+    );
+
+
+    const latestDataResult =
+      loadStudyData();
+
+
+    if (
+      latestDataResult.error ||
+      !latestDataResult.data
+    ) {
+      setSaveError(
+        latestDataResult.error ||
+        "CozyCram could not reload your current study data safely."
+      );
+
+      return;
+    }
+
+
+    const resetResult =
+      createCornerEnvironmentPreferenceReset({
+        studyData:
+          latestDataResult.data,
+      });
+
+
+    if (
+      !resetResult.valid
+    ) {
+      setSaveError(
+        resetResult.error
+      );
+
+      return;
+    }
+
+
+    const saveResult =
+      saveStudyData(
+        resetResult
+          .nextStudyData
+      );
+
+
+    if (
+      !saveResult.success
+    ) {
+      setSaveError(
+        saveResult.error
+      );
+
+      return;
+    }
+
+
+    setSavedEnvironmentId(
+      null
+    );
+
+
+    setSelectedEnvironmentId(
+      null
+    );
+
+
+    setResetConfirmationOpen(
+      false
+    );
+
+
+    setSaveNotice(
+      "My Corner is now using the CozyCram default Focus appearance."
     );
   };
 
@@ -369,7 +504,125 @@ const handleSaveEnvironment =
           </span>
         </div>
       </section>
+<section
+  className="my-corner-current"
+  aria-labelledby="my-corner-current-title"
+>
+  <div
+    className="my-corner-current__icon"
+    aria-hidden="true"
+  >
+    <Palette
+      size={24}
+      strokeWidth={1.8}
+    />
+  </div>
 
+
+  <div className="my-corner-current__content">
+    <p>
+      CURRENT FOCUS ATMOSPHERE
+    </p>
+
+    <h2 id="my-corner-current-title">
+      {savedEnvironment
+        ? savedEnvironment.name
+        : "CozyCram default"}
+    </h2>
+
+    <span>
+      {savedEnvironment
+        ? "This saved environment will appear visually in new Focus sessions."
+        : "No custom atmosphere is saved. Focus uses its original CozyCram appearance."}
+    </span>
+  </div>
+
+
+  <div className="my-corner-current__actions">
+    <Link
+      to="/focus"
+      className="my-corner-current__focus"
+    >
+      Open Focus
+
+      <ArrowRight
+        size={16}
+        strokeWidth={1.8}
+        aria-hidden="true"
+      />
+    </Link>
+
+
+    {savedEnvironment && (
+      <button
+        type="button"
+        onClick={
+          handleRequestEnvironmentReset
+        }
+      >
+        <RotateCcw
+          size={16}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        Use CozyCram default
+      </button>
+    )}
+  </div>
+</section>
+
+{resetConfirmationOpen &&
+  savedEnvironment && (
+  <section
+    className="my-corner-reset"
+    aria-labelledby="my-corner-reset-title"
+  >
+    <div>
+      <p>
+        RESET ATMOSPHERE
+      </p>
+
+      <h2 id="my-corner-reset-title">
+        Use CozyCram default instead?
+      </h2>
+
+      <span>
+        This removes the saved{" "}
+        <strong>
+          {savedEnvironment.name}
+        </strong>
+        {" "}
+        atmosphere. Your tasks, Focus
+        settings, schedules and Smart Break
+        preferences stay unchanged.
+      </span>
+    </div>
+
+
+    <div className="my-corner-reset__actions">
+      <button
+        type="button"
+        onClick={
+          handleCancelEnvironmentReset
+        }
+      >
+        Keep environment
+      </button>
+
+
+      <button
+        type="button"
+        className="my-corner-reset__confirm"
+        onClick={
+          handleConfirmEnvironmentReset
+        }
+      >
+        Use default
+      </button>
+    </div>
+  </section>
+)}
 
       <section
         className="my-corner-principles"

@@ -313,3 +313,85 @@ export const createCornerEnvironmentPreferenceUpdate =
       },
     };
   };
+
+  export const createCornerEnvironmentPreferenceReset =
+  ({
+    studyData,
+  }) => {
+    if (
+      !studyData ||
+      typeof studyData !==
+        "object"
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "My Corner requires current CozyCram study data before resetting the environment.",
+
+        changed: false,
+
+        nextStudyData:
+          null,
+      };
+    }
+
+
+    if (
+      studyData.completed !==
+        true
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "Complete your CozyCram study setup before changing My Corner preferences.",
+
+        changed: false,
+
+        nextStudyData:
+          null,
+      };
+    }
+
+
+    const currentPreferences =
+      (
+        studyData.preferences &&
+        typeof studyData.preferences ===
+          "object"
+      )
+        ? {
+            ...studyData.preferences,
+          }
+        : {};
+
+
+    const hadSavedEnvironment =
+      Object.prototype.hasOwnProperty.call(
+        currentPreferences,
+        CORNER_ENVIRONMENT_PREFERENCE_KEY
+      );
+
+
+    delete currentPreferences[
+      CORNER_ENVIRONMENT_PREFERENCE_KEY
+    ];
+
+
+    return {
+      valid: true,
+
+      error: "",
+
+      changed:
+        hadSavedEnvironment,
+
+      nextStudyData: {
+        ...studyData,
+
+        preferences:
+          currentPreferences,
+      },
+    };
+  };
