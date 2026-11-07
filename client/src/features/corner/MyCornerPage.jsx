@@ -18,8 +18,15 @@ import {
 } from "react";
 
 import {
+  loadStudyData,
+  saveStudyData,
+} from "../../services/studyDataService.js";
+
+import {
+  createCornerEnvironmentPreferenceUpdate,
   getCornerEnvironmentById,
   getCornerEnvironmentCatalog,
+  getSavedCornerEnvironment,
 } from "../../services/cornerEnvironmentService.js";
 
 import "./myCorner.css";
@@ -51,13 +58,60 @@ const environments =
 
 
 function MyCornerPage() {
-  const [
-    selectedEnvironmentId,
-    setSelectedEnvironmentId,
-  ] = useState(
-    null
+    const [
+  initialData,
+] = useState(
+  loadStudyData
+);
+
+
+const studyData =
+  initialData.data;
+
+
+const loadError =
+  initialData.error;
+
+
+const initiallySavedEnvironment =
+  getSavedCornerEnvironment(
+    studyData
   );
 
+
+const initialSavedEnvironmentId =
+  initiallySavedEnvironment
+    ?.id ??
+  null;
+
+  const [
+  selectedEnvironmentId,
+  setSelectedEnvironmentId,
+] = useState(
+  initialSavedEnvironmentId
+);
+
+const [
+  savedEnvironmentId,
+  setSavedEnvironmentId,
+] = useState(
+  initialSavedEnvironmentId
+);
+
+const [
+  saveError,
+  setSaveError,
+] = useState(
+  loadError || ""
+);
+
+
+const [
+  saveNotice,
+  setSaveNotice,
+] = useState(
+  ""
+);
 
   const selectedEnvironment =
     selectedEnvironmentId
@@ -66,6 +120,27 @@ function MyCornerPage() {
         )
       : null;
 
+const savedEnvironment =
+  savedEnvironmentId
+    ? getCornerEnvironmentById(
+        savedEnvironmentId
+      )
+    : null;
+
+    const previewDiffersFromSaved =
+  Boolean(
+    selectedEnvironment
+  ) &&
+  selectedEnvironmentId !==
+    savedEnvironmentId;
+
+
+const previewMatchesSaved =
+  Boolean(
+    selectedEnvironment
+  ) &&
+  selectedEnvironmentId ===
+    savedEnvironmentId;
 
   const handleSelectEnvironment =
     (
@@ -83,6 +158,14 @@ function MyCornerPage() {
         return;
       }
 
+setSaveError(
+  ""
+);
+
+
+setSaveNotice(
+  ""
+);
 
       setSelectedEnvironmentId(
         environment.id
@@ -91,12 +174,136 @@ function MyCornerPage() {
 
 
   const handleClearPreview =
-    () => {
-      setSelectedEnvironmentId(
-        null
-      );
-    };
+  () => {
+    setSelectedEnvironmentId(
+      null
+    );
 
+
+    setSaveError(
+      ""
+    );
+
+
+    setSaveNotice(
+      ""
+    );
+  };
+
+const handleSaveEnvironment =
+  () => {
+    if (
+      !selectedEnvironmentId
+    ) {
+      setSaveError(
+        "Choose an environment before saving."
+      );
+
+      return;
+    }
+
+
+    setSaveError(
+      ""
+    );
+
+
+    setSaveNotice(
+      ""
+    );
+
+
+    const latestDataResult =
+      loadStudyData();
+
+
+    if (
+      latestDataResult.error ||
+      !latestDataResult.data
+    ) {
+      setSaveError(
+        latestDataResult.error ||
+        "CozyCram could not reload your current study data safely."
+      );
+
+      return;
+    }
+
+
+    const updateResult =
+      createCornerEnvironmentPreferenceUpdate({
+        studyData:
+          latestDataResult.data,
+
+        environmentId:
+          selectedEnvironmentId,
+      });
+
+
+    if (
+      !updateResult.valid
+    ) {
+      setSaveError(
+        updateResult.error
+      );
+
+      return;
+    }
+
+
+    const saveResult =
+      saveStudyData(
+        updateResult
+          .nextStudyData
+      );
+
+
+    if (
+      !saveResult.success
+    ) {
+      setSaveError(
+        saveResult.error
+      );
+
+      return;
+    }
+
+
+    setSavedEnvironmentId(
+      updateResult
+        .environment
+        .id
+    );
+
+
+    setSaveNotice(
+      `${updateResult.environment.name} is now your saved My Corner environment.`
+    );
+  };
+
+  const handleRestoreSavedEnvironment =
+  () => {
+    if (
+      !savedEnvironment
+    ) {
+      return;
+    }
+
+
+    setSelectedEnvironmentId(
+      savedEnvironment.id
+    );
+
+
+    setSaveError(
+      ""
+    );
+
+
+    setSaveNotice(
+      "Saved environment restored to the preview."
+    );
+  };
 
   const SelectedEnvironmentIcon =
     selectedEnvironment
@@ -273,11 +480,10 @@ function MyCornerPage() {
           </h2>
 
           <span>
-            Preview any environment below.
-            This choice is temporary until
-            you explicitly save it in a later
-            step.
-          </span>
+  Preview any environment below,
+  then save it only when you want
+  CozyCram to remember the choice.
+</span>
         </div>
 
 
@@ -298,6 +504,9 @@ function MyCornerPage() {
                 selectedEnvironmentId ===
                 environment.id;
 
+              const isSaved =
+  savedEnvironmentId ===
+    environment.id;
 
               return (
                 <article
@@ -336,6 +545,17 @@ function MyCornerPage() {
                       }
                     </p>
 
+                    {isSaved && (
+  <span className="my-corner-environment-card__saved">
+    <Check
+      size={14}
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
+
+    Saved
+  </span>
+)}
                     <h3>
                       {
                         environment
@@ -451,35 +671,119 @@ function MyCornerPage() {
                 role="status"
                 aria-live="polite"
               >
-                <Eye
-                  size={18}
-                  strokeWidth={1.8}
-                  aria-hidden="true"
-                />
+                {previewMatchesSaved ? (
+  <>
+    <Check
+      size={18}
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
 
-                <p>
-                  Preview only — this
-                  environment has not been
-                  saved to CozyCram yet.
-                </p>
+    <p>
+      Saved environment — CozyCram
+      will remember this choice.
+    </p>
+  </>
+) : (
+  <>
+    <Eye
+      size={18}
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
+
+    <p>
+      Preview only — save this
+      environment if you want CozyCram
+      to remember it.
+    </p>
+  </>
+)}
               </div>
 
 
-              <button
-                type="button"
-                className="my-corner-preview__clear"
-                onClick={
-                  handleClearPreview
-                }
-              >
-                <RotateCcw
-                  size={17}
-                  strokeWidth={1.8}
-                  aria-hidden="true"
-                />
+              <div className="my-corner-preview__actions">
+  <button
+    type="button"
+    className="my-corner-preview__save"
+    onClick={
+      handleSaveEnvironment
+    }
+    disabled={
+      !previewDiffersFromSaved
+    }
+  >
+    <Check
+      size={17}
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
 
-                Clear preview
-              </button>
+    {previewMatchesSaved
+      ? "Environment saved"
+      : "Save environment"}
+  </button>
+
+
+  {savedEnvironment &&
+    previewDiffersFromSaved && (
+    <button
+      type="button"
+      className="my-corner-preview__secondary"
+      onClick={
+        handleRestoreSavedEnvironment
+      }
+    >
+      <RotateCcw
+        size={17}
+        strokeWidth={1.8}
+        aria-hidden="true"
+      />
+
+      Restore saved
+    </button>
+  )}
+
+
+  <button
+    type="button"
+    className="my-corner-preview__secondary"
+    onClick={
+      handleClearPreview
+    }
+  >
+    <Eye
+      size={17}
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
+
+    Clear preview
+  </button>
+</div>
+{saveError && (
+  <div
+    className="my-corner-preview__feedback my-corner-preview__feedback--error"
+    role="alert"
+  >
+    <p>
+      {saveError}
+    </p>
+  </div>
+)}
+
+
+{saveNotice && (
+  <div
+    className="my-corner-preview__feedback"
+    role="status"
+    aria-live="polite"
+  >
+    <p>
+      {saveNotice}
+    </p>
+  </div>
+)}
             </div>
           </>
         ) : (
@@ -510,6 +814,27 @@ function MyCornerPage() {
                 how your study atmosphere
                 could feel.
               </span>
+              {savedEnvironment && (
+  <button
+    type="button"
+    className="my-corner-preview__restore"
+    onClick={
+      handleRestoreSavedEnvironment
+    }
+  >
+    <RotateCcw
+      size={17}
+      strokeWidth={1.8}
+      aria-hidden="true"
+    />
+
+    Preview saved{" "}
+    {
+      savedEnvironment
+        .name
+    }
+  </button>
+)}
             </div>
           </>
         )}

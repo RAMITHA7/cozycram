@@ -1,6 +1,8 @@
 export const CORNER_ENVIRONMENT_VERSION =
   1;
 
+export const CORNER_ENVIRONMENT_PREFERENCE_KEY =
+  "cornerEnvironmentId";
 
 export const CORNER_ENVIRONMENT_ID = {
   RAINY_WINDOW:
@@ -179,4 +181,135 @@ export const getCornerEnvironmentById =
           ...environment,
         }
       : null;
+  };
+export const getSavedCornerEnvironment = (
+  studyData
+) => {
+  if (
+    !studyData ||
+    typeof studyData !==
+      "object"
+  ) {
+    return null;
+  }
+
+
+  const savedEnvironmentId =
+    studyData
+      .preferences
+      ?.[
+        CORNER_ENVIRONMENT_PREFERENCE_KEY
+      ];
+
+
+  if (
+    !savedEnvironmentId
+  ) {
+    return null;
+  }
+
+
+  return getCornerEnvironmentById(
+    savedEnvironmentId
+  );
+};
+
+export const createCornerEnvironmentPreferenceUpdate =
+  ({
+    studyData,
+    environmentId,
+  }) => {
+    if (
+      !studyData ||
+      typeof studyData !==
+        "object"
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "My Corner requires current CozyCram study data before saving an environment.",
+
+        nextStudyData:
+          null,
+
+        environment:
+          null,
+      };
+    }
+
+
+    if (
+      studyData.completed !==
+        true
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "Complete your CozyCram study setup before saving a My Corner environment.",
+
+        nextStudyData:
+          null,
+
+        environment:
+          null,
+      };
+    }
+
+
+    const environment =
+      getCornerEnvironmentById(
+        environmentId
+      );
+
+
+    if (
+      !environment
+    ) {
+      return {
+        valid: false,
+
+        error:
+          "Choose a valid My Corner environment before saving.",
+
+        nextStudyData:
+          null,
+
+        environment:
+          null,
+      };
+    }
+
+
+    const currentPreferences =
+      (
+        studyData.preferences &&
+        typeof studyData.preferences ===
+          "object"
+      )
+        ? studyData.preferences
+        : {};
+
+
+    return {
+      valid: true,
+
+      error: "",
+
+      environment,
+
+      nextStudyData: {
+        ...studyData,
+
+        preferences: {
+          ...currentPreferences,
+
+          [
+            CORNER_ENVIRONMENT_PREFERENCE_KEY
+          ]:
+            environment.id,
+        },
+      },
+    };
   };
