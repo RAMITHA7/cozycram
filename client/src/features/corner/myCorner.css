@@ -268,73 +268,23 @@ p {
 
 
 /* =========================================================
-   CATALOG FOUNDATION
+   ENVIRONMENT CATALOG
    ========================================================= */
 
-.my-corner-catalog-preview {
-  min-height: 220px;
-
+.my-corner-catalog {
   display: flex;
-  align-items: center;
+  flex-direction: column;
 
   gap:
     var(--space-4);
-
-  padding:
-    var(--space-6);
-
-  border:
-    1px dashed
-    var(--color-border-subtle);
-
-  border-radius:
-    var(--radius-lg);
-
-  background:
-    var(--color-surface-1);
 }
 
 
-.my-corner-catalog-preview__icon {
-  width: 52px;
-  height: 52px;
-
-  flex:
-    0 0 auto;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  border-radius:
-    var(--radius-md);
-
-  background:
-    var(--color-surface-2);
-
-  color:
-    var(--color-brand);
-}
-
-
-.my-corner-catalog-preview
-> div:last-child {
-  min-width: 0;
-}
-
-
-.my-corner-catalog-preview
-h2 {
-  font-size:
-    var(--text-heading-lg);
-}
-
-
-.my-corner-catalog-preview
-span {
+.my-corner-section-heading
+> span {
   display: block;
 
-  max-width: 680px;
+  max-width: 700px;
 
   margin-top:
     var(--space-2);
@@ -345,9 +295,236 @@ span {
   font-size:
     var(--text-body-sm);
 
-  line-height: 1.6;
+  line-height: 1.55;
 }
 
+
+.my-corner-environment-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(0, 1fr)
+    );
+
+  gap:
+    var(--space-4);
+}
+
+
+.my-corner-environment-card {
+  min-width: 0;
+
+  overflow: hidden;
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-lg);
+
+  background:
+    var(--color-surface-1);
+}
+
+
+.my-corner-environment-card__visual {
+  min-height: 150px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-direction:
+    column;
+
+  gap:
+    var(--space-2);
+
+  padding:
+    var(--space-4);
+
+  color:
+    var(--color-brand);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--color-brand) 8%,
+      var(--color-surface-2)
+    );
+}
+
+
+.my-corner-environment-card__visual
+span {
+  font-size:
+    var(--text-body-sm);
+
+  font-weight:
+    var(--font-weight-semibold);
+
+  letter-spacing:
+    0.02em;
+}
+
+
+.my-corner-environment-card__visual--rain {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(
+        in srgb,
+        var(--color-brand) 7%,
+        var(--color-surface-2)
+      ),
+      var(--color-surface-1)
+    );
+}
+
+
+.my-corner-environment-card__visual--library {
+  background:
+    linear-gradient(
+      145deg,
+      var(--color-surface-2),
+      color-mix(
+        in srgb,
+        var(--color-brand) 11%,
+        var(--color-surface-1)
+      )
+    );
+}
+
+
+.my-corner-environment-card__visual--city {
+  background:
+    linear-gradient(
+      160deg,
+      color-mix(
+        in srgb,
+        var(--color-text-primary) 7%,
+        var(--color-surface-2)
+      ),
+      color-mix(
+        in srgb,
+        var(--color-brand) 8%,
+        var(--color-surface-1)
+      )
+    );
+}
+
+
+.my-corner-environment-card__visual--cafe {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(
+        in srgb,
+        var(--color-brand) 12%,
+        var(--color-surface-1)
+      ),
+      var(--color-surface-2)
+    );
+}
+
+
+.my-corner-environment-card__visual--forest {
+  background:
+    linear-gradient(
+      145deg,
+      var(--color-surface-2),
+      color-mix(
+        in srgb,
+        var(--color-text-secondary) 9%,
+        var(--color-surface-1)
+      )
+    );
+}
+
+
+.my-corner-environment-card__visual--space {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(
+        in srgb,
+        var(--color-text-primary) 10%,
+        var(--color-surface-2)
+      ),
+      var(--color-surface-1)
+    );
+}
+
+
+.my-corner-environment-card__content {
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-2);
+
+  padding:
+    var(--space-4);
+}
+
+
+.my-corner-environment-card__content
+> p {
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-overline);
+
+  font-weight:
+    var(--font-weight-semibold);
+
+  letter-spacing:
+    0.08em;
+}
+
+
+.my-corner-environment-card__content
+h3 {
+  overflow-wrap:
+    anywhere;
+
+  font-size:
+    var(--text-heading-sm);
+
+  line-height: 1.35;
+}
+
+
+.my-corner-environment-card__content
+> span {
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+
+  line-height: 1.55;
+}
+
+
+.my-corner-environment-card__content
+small {
+  margin-top:
+    auto;
+
+  padding-top:
+    var(--space-2);
+
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
 
 /* =========================================================
    RESPONSIVE
@@ -360,6 +537,13 @@ span {
     grid-template-columns:
       1fr;
   }
+  .my-corner-environment-grid {
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+}
 }
 
 
@@ -377,9 +561,12 @@ span {
       var(--text-display-sm);
   }
 
+    .my-corner-environment-grid {
+  grid-template-columns:
+    1fr;
+}
 
-  .my-corner-hero,
-  .my-corner-catalog-preview {
+  .my-corner-hero{
     align-items:
       flex-start;
 

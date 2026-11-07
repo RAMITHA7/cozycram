@@ -1,11 +1,45 @@
 import {
+  BookOpen,
+  Building2,
+  CloudRain,
+  Coffee,
   Moon,
   Palette,
   ShieldCheck,
   Sparkles,
+  Trees,
 } from "lucide-react";
 
+import {
+  getCornerEnvironmentCatalog,
+} from "../../services/cornerEnvironmentService.js";
+
 import "./myCorner.css";
+
+
+const ENVIRONMENT_ICON_MAP = {
+  rain:
+    CloudRain,
+
+  library:
+    BookOpen,
+
+  city:
+    Building2,
+
+  cafe:
+    Coffee,
+
+  forest:
+    Trees,
+
+  space:
+    Sparkles,
+};
+
+
+const environments =
+  getCornerEnvironmentCatalog();
 
 
 function MyCornerPage() {
@@ -56,11 +90,10 @@ function MyCornerPage() {
           </h2>
 
           <span>
-            My Corner will let you choose a
-            visual study environment that can
-            accompany Focus mode while keeping
-            your schedule, tasks and study
-            decisions unchanged.
+            My Corner lets you shape the
+            visual atmosphere around studying
+            while keeping schedules, tasks and
+            planning decisions separate.
           </span>
         </div>
       </section>
@@ -99,8 +132,8 @@ function MyCornerPage() {
               </h3>
 
               <p>
-                Your environment changes how
-                the study space feels, not what
+                Environments change how the
+                study space feels, not what
                 CozyCram decides you should
                 study.
               </p>
@@ -126,8 +159,8 @@ function MyCornerPage() {
 
               <p>
                 CozyCram will not automatically
-                switch environments or choose
-                one based on productivity.
+                choose an atmosphere based on
+                productivity or performance.
               </p>
             </div>
           </article>
@@ -150,9 +183,10 @@ function MyCornerPage() {
               </h3>
 
               <p>
-                My Corner is personal study
-                customization, not a social
-                profile, feed or public space.
+                My Corner remains personal
+                customization rather than a
+                profile, social feed or public
+                space.
               </p>
             </div>
           </article>
@@ -161,35 +195,94 @@ function MyCornerPage() {
 
 
       <section
-        className="my-corner-catalog-preview"
+        className="my-corner-catalog"
         aria-labelledby="my-corner-catalog-title"
       >
-        <div
-          className="my-corner-catalog-preview__icon"
-          aria-hidden="true"
-        >
-          <Sparkles
-            size={24}
-            strokeWidth={1.8}
-          />
-        </div>
-
-
-        <div>
+        <div className="my-corner-section-heading">
           <p>
             FOCUS ENVIRONMENTS
           </p>
 
           <h2 id="my-corner-catalog-title">
-            Your atmosphere collection starts here.
+            Choose the atmosphere that feels right
           </h2>
 
           <span>
-            The environment catalog will appear
-            here next. Stage 1 establishes the
-            My Corner space without selecting or
-            saving anything yet.
+            These environments are visual
+            options only. Selection and preview
+            arrive in the next stage.
           </span>
+        </div>
+
+
+        <div className="my-corner-environment-grid">
+          {environments.map(
+            (
+              environment
+            ) => {
+              const EnvironmentIcon =
+                ENVIRONMENT_ICON_MAP[
+                  environment
+                    .visualKey
+                ] ||
+                Sparkles;
+
+
+              return (
+                <article
+                  key={
+                    environment.id
+                  }
+                  className="my-corner-environment-card"
+                >
+                  <div
+                    className={`my-corner-environment-card__visual my-corner-environment-card__visual--${environment.visualKey}`}
+                    aria-hidden="true"
+                  >
+                    <EnvironmentIcon
+                      size={30}
+                      strokeWidth={1.7}
+                    />
+
+                    <span>
+                      {
+                        environment
+                          .name
+                      }
+                    </span>
+                  </div>
+
+
+                  <div className="my-corner-environment-card__content">
+                    <p>
+                      {
+                        environment
+                          .name
+                      }
+                    </p>
+
+                    <h3>
+                      {
+                        environment
+                          .atmosphere
+                      }
+                    </h3>
+
+                    <span>
+                      {
+                        environment
+                          .description
+                      }
+                    </span>
+
+                    <small>
+                      Preview selection arrives next.
+                    </small>
+                  </div>
+                </article>
+              );
+            }
+          )}
         </div>
       </section>
     </main>
