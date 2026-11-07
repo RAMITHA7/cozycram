@@ -1,0 +1,411 @@
+/* =========================================================
+   MY CORNER
+   ========================================================= */
+
+.my-corner-page {
+  width: 100%;
+  max-width: 1240px;
+
+  margin:
+    0
+    auto;
+
+  padding:
+    var(--space-6);
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-6);
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.my-corner-header {
+  max-width: 760px;
+}
+
+
+.my-corner-header__eyebrow,
+.my-corner-section-heading
+> p,
+.my-corner-hero__content
+> p,
+.my-corner-catalog-preview
+> div:last-child
+> p {
+  margin-bottom:
+    var(--space-2);
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-overline);
+
+  font-weight:
+    var(--font-weight-semibold);
+
+  letter-spacing:
+    0.08em;
+}
+
+
+.my-corner-header h1 {
+  font-size:
+    var(--text-display-md);
+
+  line-height: 1.1;
+}
+
+
+.my-corner-header__intro {
+  max-width: 700px;
+
+  margin-top:
+    var(--space-3);
+
+  color:
+    var(--color-text-secondary);
+
+  line-height: 1.6;
+}
+
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.my-corner-hero {
+  display: flex;
+  align-items: center;
+
+  gap:
+    var(--space-5);
+
+  padding:
+    var(--space-6);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-lg);
+
+  background:
+    var(--color-surface-1);
+}
+
+
+.my-corner-hero__icon {
+  width: 64px;
+  height: 64px;
+
+  flex:
+    0 0 auto;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius:
+    var(--radius-lg);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--color-brand) 10%,
+      transparent
+    );
+
+  color:
+    var(--color-brand);
+}
+
+
+.my-corner-hero__content {
+  min-width: 0;
+}
+
+
+.my-corner-hero__content h2 {
+  overflow-wrap:
+    anywhere;
+
+  font-size:
+    var(--text-heading-lg);
+}
+
+
+.my-corner-hero__content
+> span {
+  display: block;
+
+  max-width: 760px;
+
+  margin-top:
+    var(--space-2);
+
+  color:
+    var(--color-text-secondary);
+
+  line-height: 1.6;
+}
+
+
+/* =========================================================
+   PRINCIPLES
+   ========================================================= */
+
+.my-corner-section-heading h2 {
+  font-size:
+    var(--text-heading-lg);
+}
+
+
+.my-corner-principles {
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-4);
+}
+
+
+.my-corner-principles__grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      minmax(0, 1fr)
+    );
+
+  gap:
+    var(--space-4);
+}
+
+
+.my-corner-principles__grid
+article {
+  min-width: 0;
+
+  display: flex;
+  align-items: flex-start;
+
+  gap:
+    var(--space-3);
+
+  padding:
+    var(--space-4);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-1);
+}
+
+
+.my-corner-principles__icon {
+  width: 42px;
+  height: 42px;
+
+  flex:
+    0 0 auto;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+
+  color:
+    var(--color-brand);
+}
+
+
+.my-corner-principles__grid
+article
+> div:last-child {
+  min-width: 0;
+}
+
+
+.my-corner-principles__grid
+h3 {
+  font-size:
+    var(--text-heading-sm);
+}
+
+
+.my-corner-principles__grid
+p {
+  margin-top:
+    var(--space-1);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+
+  line-height: 1.55;
+}
+
+
+/* =========================================================
+   CATALOG FOUNDATION
+   ========================================================= */
+
+.my-corner-catalog-preview {
+  min-height: 220px;
+
+  display: flex;
+  align-items: center;
+
+  gap:
+    var(--space-4);
+
+  padding:
+    var(--space-6);
+
+  border:
+    1px dashed
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-lg);
+
+  background:
+    var(--color-surface-1);
+}
+
+
+.my-corner-catalog-preview__icon {
+  width: 52px;
+  height: 52px;
+
+  flex:
+    0 0 auto;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+
+  color:
+    var(--color-brand);
+}
+
+
+.my-corner-catalog-preview
+> div:last-child {
+  min-width: 0;
+}
+
+
+.my-corner-catalog-preview
+h2 {
+  font-size:
+    var(--text-heading-lg);
+}
+
+
+.my-corner-catalog-preview
+span {
+  display: block;
+
+  max-width: 680px;
+
+  margin-top:
+    var(--space-2);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+
+  line-height: 1.6;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (
+  max-width: 1023px
+) {
+  .my-corner-principles__grid {
+    grid-template-columns:
+      1fr;
+  }
+}
+
+
+@media (
+  max-width: 767px
+) {
+  .my-corner-page {
+    padding:
+      var(--space-4);
+  }
+
+
+  .my-corner-header h1 {
+    font-size:
+      var(--text-display-sm);
+  }
+
+
+  .my-corner-hero,
+  .my-corner-catalog-preview {
+    align-items:
+      flex-start;
+
+    flex-direction:
+      column;
+
+    padding:
+      var(--space-4);
+  }
+}
+
+
+@media (
+  max-width: 420px
+) {
+  .my-corner-page {
+    padding:
+      var(--space-3);
+  }
+
+
+  .my-corner-hero,
+  .my-corner-catalog-preview,
+  .my-corner-principles__grid
+  article {
+    padding:
+      var(--space-3);
+  }
+}

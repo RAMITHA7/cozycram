@@ -25,6 +25,7 @@ import AvailabilityPage from "../features/planner/AvailabilityPage.jsx";
 import CalendarPage from "../features/calendar/CalendarPage.jsx";
 import FocusPage from "../features/focus/FocusPage.jsx";
 import FocusSessionPage from "../features/focus/FocusSessionPage.jsx";
+import MyCornerPage from "../features/corner/MyCornerPage.jsx";
 
 import RoutePlaceholder from "./RoutePlaceholder.jsx";
 import LandingPage from "../features/landing/LandingPage.jsx";
@@ -126,7 +127,10 @@ const router = createBrowserRouter([
         path: "/calendar",
         element: <CalendarPage />
       },
-
+      {
+  path: "/corner",
+  element: <MyCornerPage />,
+},
       {
         path: "/profile",
         element: (
