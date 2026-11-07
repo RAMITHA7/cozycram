@@ -1,16 +1,24 @@
 import {
   BookOpen,
   Building2,
+  Check,
   CloudRain,
   Coffee,
+  Eye,
   Moon,
   Palette,
+  RotateCcw,
   ShieldCheck,
   Sparkles,
   Trees,
 } from "lucide-react";
 
 import {
+  useState,
+} from "react";
+
+import {
+  getCornerEnvironmentById,
   getCornerEnvironmentCatalog,
 } from "../../services/cornerEnvironmentService.js";
 
@@ -43,6 +51,63 @@ const environments =
 
 
 function MyCornerPage() {
+  const [
+    selectedEnvironmentId,
+    setSelectedEnvironmentId,
+  ] = useState(
+    null
+  );
+
+
+  const selectedEnvironment =
+    selectedEnvironmentId
+      ? getCornerEnvironmentById(
+          selectedEnvironmentId
+        )
+      : null;
+
+
+  const handleSelectEnvironment =
+    (
+      environmentId
+    ) => {
+      const environment =
+        getCornerEnvironmentById(
+          environmentId
+        );
+
+
+      if (
+        !environment
+      ) {
+        return;
+      }
+
+
+      setSelectedEnvironmentId(
+        environment.id
+      );
+    };
+
+
+  const handleClearPreview =
+    () => {
+      setSelectedEnvironmentId(
+        null
+      );
+    };
+
+
+  const SelectedEnvironmentIcon =
+    selectedEnvironment
+      ? ENVIRONMENT_ICON_MAP[
+          selectedEnvironment
+            .visualKey
+        ] ||
+        Sparkles
+      : Sparkles;
+
+
   return (
     <main
       className="my-corner-page"
@@ -208,9 +273,10 @@ function MyCornerPage() {
           </h2>
 
           <span>
-            These environments are visual
-            options only. Selection and preview
-            arrive in the next stage.
+            Preview any environment below.
+            This choice is temporary until
+            you explicitly save it in a later
+            step.
           </span>
         </div>
 
@@ -228,12 +294,21 @@ function MyCornerPage() {
                 Sparkles;
 
 
+              const isSelected =
+                selectedEnvironmentId ===
+                environment.id;
+
+
               return (
                 <article
                   key={
                     environment.id
                   }
-                  className="my-corner-environment-card"
+                  className={`my-corner-environment-card${
+                    isSelected
+                      ? " my-corner-environment-card--selected"
+                      : ""
+                  }`}
                 >
                   <div
                     className={`my-corner-environment-card__visual my-corner-environment-card__visual--${environment.visualKey}`}
@@ -275,15 +350,169 @@ function MyCornerPage() {
                       }
                     </span>
 
-                    <small>
-                      Preview selection arrives next.
-                    </small>
+
+                    <button
+                      type="button"
+                      className="my-corner-environment-card__select"
+                      aria-pressed={
+                        isSelected
+                      }
+                      onClick={
+                        () =>
+                          handleSelectEnvironment(
+                            environment.id
+                          )
+                      }
+                    >
+                      {isSelected ? (
+                        <Check
+                          size={17}
+                          strokeWidth={1.8}
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <Eye
+                          size={17}
+                          strokeWidth={1.8}
+                          aria-hidden="true"
+                        />
+                      )}
+
+                      {isSelected
+                        ? "Previewing"
+                        : "Preview environment"}
+                    </button>
                   </div>
                 </article>
               );
             }
           )}
         </div>
+      </section>
+
+
+      <section
+        className={`my-corner-preview${
+          selectedEnvironment
+            ? ` my-corner-preview--${selectedEnvironment.visualKey}`
+            : ""
+        }`}
+        aria-labelledby="my-corner-preview-title"
+      >
+        {selectedEnvironment ? (
+          <>
+            <div
+              className="my-corner-preview__scene"
+              aria-hidden="true"
+            >
+              <SelectedEnvironmentIcon
+                size={38}
+                strokeWidth={1.6}
+              />
+
+              <span>
+                {
+                  selectedEnvironment
+                    .name
+                }
+              </span>
+            </div>
+
+
+            <div className="my-corner-preview__content">
+              <p>
+                LIVE PREVIEW
+              </p>
+
+              <h2 id="my-corner-preview-title">
+                {
+                  selectedEnvironment
+                    .name
+                }
+              </h2>
+
+              <strong>
+                {
+                  selectedEnvironment
+                    .atmosphere
+                }
+              </strong>
+
+              <span>
+                {
+                  selectedEnvironment
+                    .description
+                }
+              </span>
+
+
+              <div
+                className="my-corner-preview__notice"
+                role="status"
+                aria-live="polite"
+              >
+                <Eye
+                  size={18}
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+
+                <p>
+                  Preview only — this
+                  environment has not been
+                  saved to CozyCram yet.
+                </p>
+              </div>
+
+
+              <button
+                type="button"
+                className="my-corner-preview__clear"
+                onClick={
+                  handleClearPreview
+                }
+              >
+                <RotateCcw
+                  size={17}
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+
+                Clear preview
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div
+              className="my-corner-preview__empty-icon"
+              aria-hidden="true"
+            >
+              <Eye
+                size={27}
+                strokeWidth={1.8}
+              />
+            </div>
+
+
+            <div className="my-corner-preview__empty">
+              <p>
+                LIVE PREVIEW
+              </p>
+
+              <h2 id="my-corner-preview-title">
+                No environment selected
+              </h2>
+
+              <span>
+                Choose one of the six
+                environments above to preview
+                how your study atmosphere
+                could feel.
+              </span>
+            </div>
+          </>
+        )}
       </section>
     </main>
   );
