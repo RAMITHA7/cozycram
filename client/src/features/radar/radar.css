@@ -424,6 +424,570 @@ small {
 }
 
 /* =========================================================
+   OVERALL PRESSURE
+   ========================================================= */
+
+.radar-pressure {
+  display: grid;
+
+  grid-template-columns:
+    auto
+    minmax(0, 1fr)
+    auto;
+
+  align-items: center;
+
+  gap:
+    var(--space-4);
+
+  padding:
+    var(--space-5);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-lg);
+
+  background:
+    var(--color-surface-1);
+}
+
+
+.radar-pressure__icon {
+  width: 54px;
+  height: 54px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+
+  color:
+    var(--color-brand);
+}
+
+
+.radar-pressure__content {
+  min-width: 0;
+}
+
+
+.radar-pressure__content
+> p {
+  margin-bottom:
+    var(--space-1);
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-overline);
+
+  font-weight:
+    var(--font-weight-semibold);
+
+  letter-spacing:
+    0.08em;
+}
+
+
+.radar-pressure__content
+h2 {
+  font-size:
+    var(--text-heading-lg);
+}
+
+
+.radar-pressure__content
+> span {
+  display: block;
+
+  max-width: 700px;
+
+  margin-top:
+    var(--space-2);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+
+  line-height: 1.55;
+}
+
+
+.radar-pressure__content
+> small {
+  display: block;
+
+  margin-top:
+    var(--space-2);
+
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+
+  line-height: 1.5;
+}
+
+
+.radar-pressure__badge {
+  min-height: 34px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding:
+    0
+    var(--space-3);
+
+  border:
+    1px solid
+    var(--color-brand);
+
+  border-radius:
+    999px;
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-body-sm);
+
+  font-weight:
+    var(--font-weight-semibold);
+}
+/* =========================================================
+   PRESSURE BANDS
+   ========================================================= */
+
+.radar-bands {
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-4);
+}
+
+
+.radar-bands__track {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      4,
+      minmax(0, 1fr)
+    );
+
+  gap:
+    var(--space-2);
+}
+
+
+.radar-band {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-1);
+
+  padding:
+    var(--space-3);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+
+  opacity: 0.68;
+}
+
+
+.radar-band--active {
+  border-color:
+    var(--color-brand);
+
+  background:
+    color-mix(
+      in srgb,
+      var(--color-brand) 10%,
+      var(--color-surface-1)
+    );
+
+  opacity: 1;
+}
+
+
+.radar-band
+span {
+  color:
+    var(--color-text-primary);
+
+  font-size:
+    var(--text-body-sm);
+
+  font-weight:
+    var(--font-weight-semibold);
+}
+
+
+.radar-band
+strong {
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
+/* =========================================================
+   DEADLINE HORIZONS
+   ========================================================= */
+
+.radar-horizons {
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-4);
+}
+
+
+.radar-section-heading
+> span {
+  display: block;
+
+  max-width: 720px;
+
+  margin-top:
+    var(--space-2);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+
+  line-height: 1.55;
+}
+
+
+.radar-horizons__list {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+
+  gap:
+    var(--space-4);
+}
+
+
+.radar-horizon {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-4);
+
+  padding:
+    var(--space-4);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-lg);
+
+  background:
+    var(--color-surface-1);
+}
+
+
+.radar-horizon__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap:
+    var(--space-3);
+}
+
+
+.radar-horizon__heading
+> div {
+  min-width: 0;
+}
+
+
+.radar-horizon__heading
+> div
+> span {
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-overline);
+
+  font-weight:
+    var(--font-weight-semibold);
+
+  letter-spacing:
+    0.08em;
+}
+
+
+.radar-horizon__heading
+h3 {
+  margin-top:
+    var(--space-1);
+
+  font-size:
+    var(--text-heading-md);
+}
+
+
+.radar-horizon__heading
+small {
+  display: block;
+
+  margin-top:
+    var(--space-1);
+
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
+
+
+.radar-horizon__risk {
+  flex:
+    0 0 auto;
+
+  min-height: 30px;
+
+  display: inline-flex;
+  align-items: center;
+
+  padding:
+    0
+    var(--space-3);
+
+  border:
+    1px solid
+    var(--color-brand);
+
+  border-radius:
+    999px;
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-caption);
+
+  font-weight:
+    var(--font-weight-semibold);
+}
+.radar-horizon__metrics {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+
+  gap:
+    var(--space-2);
+}
+
+
+.radar-horizon__metrics
+> div {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap:
+    var(--space-1);
+
+  padding:
+    var(--space-3);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-2);
+}
+
+
+.radar-horizon__metrics
+span {
+  color:
+    var(--color-text-muted);
+
+  font-size:
+    var(--text-caption);
+}
+
+
+.radar-horizon__metrics
+strong {
+  overflow-wrap:
+    anywhere;
+
+  font-size:
+    var(--text-heading-sm);
+
+  font-variant-numeric:
+    tabular-nums;
+}
+
+
+.radar-horizon__note {
+  padding-top:
+    var(--space-3);
+
+  border-top:
+    1px solid
+    var(--color-divider);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+}
+/* =========================================================
+   RADAR NOTES
+   ========================================================= */
+
+.radar-notes {
+  display: flex;
+  align-items: flex-start;
+
+  gap:
+    var(--space-4);
+
+  padding:
+    var(--space-4);
+
+  border:
+    1px solid
+    var(--color-border-subtle);
+
+  border-radius:
+    var(--radius-lg);
+
+  background:
+    var(--color-surface-2);
+}
+
+
+.radar-notes__icon {
+  width: 42px;
+  height: 42px;
+
+  flex:
+    0 0 auto;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius:
+    var(--radius-md);
+
+  background:
+    var(--color-surface-1);
+
+  color:
+    var(--color-brand);
+}
+
+
+.radar-notes
+> div:last-child {
+  min-width: 0;
+}
+
+
+.radar-notes
+> div:last-child
+> p {
+  margin-bottom:
+    var(--space-1);
+
+  color:
+    var(--color-brand);
+
+  font-size:
+    var(--text-overline);
+
+  font-weight:
+    var(--font-weight-semibold);
+
+  letter-spacing:
+    0.08em;
+}
+
+
+.radar-notes h2 {
+  font-size:
+    var(--text-heading-md);
+}
+
+
+.radar-notes span {
+  display: block;
+
+  max-width: 720px;
+
+  margin-top:
+    var(--space-2);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size:
+    var(--text-body-sm);
+
+  line-height: 1.55;
+}
+
+/* =========================================================
    ANALYSIS FOUNDATION
    ========================================================= */
 
@@ -454,7 +1018,14 @@ small {
 /* =========================================================
    RESPONSIVE
    ========================================================= */
-
+@media (
+  max-width: 1023px
+) {
+    .radar-horizons__list {
+  grid-template-columns:
+    1fr;
+}
+}
 @media (
   max-width: 767px
 ) {
@@ -494,6 +1065,40 @@ small {
   padding:
     var(--space-4);
 }
+.radar-pressure {
+  grid-template-columns:
+    1fr;
+
+  padding:
+    var(--space-4);
+}
+
+
+.radar-pressure__badge {
+  width:
+    fit-content;
+}
+
+
+.radar-bands__track {
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+}
+
+
+.radar-horizon__metrics {
+  grid-template-columns:
+    1fr;
+}
+
+
+.radar-notes {
+  padding:
+    var(--space-4);
+}
 }
 
 
@@ -519,5 +1124,29 @@ small {
 
   padding:
     var(--space-3);
+}
+.radar-pressure,
+.radar-horizon,
+.radar-notes {
+  padding:
+    var(--space-3);
+}
+
+
+.radar-bands__track {
+  grid-template-columns:
+    1fr;
+}
+
+
+.radar-horizon__heading {
+  flex-direction:
+    column;
+}
+
+
+.radar-notes {
+  flex-direction:
+    column;
 }
 }
