@@ -1472,5 +1472,4 @@ export const createRadarDeadlineAnalysis =
         horizons,
       },
     };
-  };
-  
+};
