@@ -6,10 +6,86 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+import {
+  useState,
+} from "react";
+
+import {
+  loadStudyData,
+} from "../../services/studyDataService.js";
+
+import {
+  createRadarInputSnapshot,
+  RADAR_INPUT_STATUS,
+} from "../../services/radarService.js";
+
 import "./radar.css";
 
+const formatMinutes = (
+  value
+) => {
+  const totalMinutes =
+    Number(
+      value
+    ) || 0;
+
+
+  const hours =
+    Math.floor(
+      totalMinutes / 60
+    );
+
+
+  const minutes =
+    totalMinutes % 60;
+
+
+  if (
+    hours > 0 &&
+    minutes > 0
+  ) {
+    return `${hours}h ${minutes}m`;
+  }
+
+
+  if (
+    hours > 0
+  ) {
+    return `${hours}h`;
+  }
+
+
+  return `${minutes} min`;
+};
 
 function RadarPage() {
+    const [
+  initialData,
+] = useState(
+  loadStudyData
+);
+
+
+const studyData =
+  initialData.data;
+
+
+const loadError =
+  initialData.error;
+
+
+const radarResult =
+  !loadError
+    ? createRadarInputSnapshot(
+        studyData
+      )
+    : null;
+
+
+const radarSnapshot =
+  radarResult
+    ?.snapshot ??
+  null;
   return (
     <main
       className="radar-page"
@@ -184,38 +260,214 @@ function RadarPage() {
       </section>
 
 
-      <section
-        className="radar-foundation"
-        aria-labelledby="radar-foundation-title"
-      >
-        <div
-          className="radar-foundation__icon"
-          aria-hidden="true"
-        >
-          <Gauge
-            size={25}
-            strokeWidth={1.8}
-          />
-        </div>
+      {loadError ? (
+  <section
+    className="radar-state"
+    role="alert"
+  >
+    <div
+      className="radar-state__icon"
+      aria-hidden="true"
+    >
+      <Gauge
+        size={24}
+        strokeWidth={1.8}
+      />
+    </div>
 
+    <div>
+      <h2>
+        Radar couldn't load your study data.
+      </h2>
+
+      <p>
+        {loadError}
+      </p>
+    </div>
+  </section>
+) : !radarResult?.valid ? (
+  <section
+    className="radar-state"
+    role="alert"
+  >
+    <div
+      className="radar-state__icon"
+      aria-hidden="true"
+    >
+      <Gauge
+        size={24}
+        strokeWidth={1.8}
+      />
+    </div>
+
+    <div>
+      <h2>
+        Radar needs attention.
+      </h2>
+
+      <p>
+        {
+          radarResult
+            ?.error
+        }
+      </p>
+    </div>
+  </section>
+) : (
+  <>
+    <section
+      className="radar-summary"
+      aria-label="Cram Radar input summary"
+    >
+      <article>
+        <Activity
+          size={20}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
 
         <div>
-          <p>
-            RADAR ANALYSIS
-          </p>
-
-          <h2 id="radar-foundation-title">
-            Your workload picture starts here.
-          </h2>
-
           <span>
-            The next stage connects this page to
-            your existing CozyCram study data.
-            Nothing is changed or rescheduled
-            automatically.
+            Open work
           </span>
+
+          <strong>
+            {
+              formatMinutes(
+                radarSnapshot
+                  .remainingWorkMinutes
+              )
+            }
+          </strong>
+
+          <small>
+            {
+              radarSnapshot
+                .openTaskCount
+            }
+            {" "}
+            open{" "}
+            {
+              radarSnapshot
+                .openTaskCount ===
+              1
+                ? "task"
+                : "tasks"
+            }
+          </small>
         </div>
-      </section>
+      </article>
+
+
+      <article>
+        <CalendarClock
+          size={20}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        <div>
+          <span>
+            Dated work
+          </span>
+
+          <strong>
+            {
+              radarSnapshot
+                .datedTaskCount
+            }
+          </strong>
+
+          <small>
+            Open tasks with valid deadlines
+          </small>
+        </div>
+      </article>
+
+
+      <article>
+        <Clock3
+          size={20}
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
+
+        <div>
+          <span>
+            Weekly capacity
+          </span>
+
+          <strong>
+            {
+              formatMinutes(
+                radarSnapshot
+                  .weeklyAvailableMinutes
+              )
+            }
+          </strong>
+
+          <small>
+            Enabled study availability
+          </small>
+        </div>
+      </article>
+    </section>
+
+
+    <section
+      className="radar-foundation"
+      aria-labelledby="radar-foundation-title"
+    >
+      <div
+        className="radar-foundation__icon"
+        aria-hidden="true"
+      >
+        <Gauge
+          size={25}
+          strokeWidth={1.8}
+        />
+      </div>
+
+      <div>
+        <p>
+          RADAR STATUS
+        </p>
+
+        <h2 id="radar-foundation-title">
+          {
+            radarSnapshot
+              .status ===
+            RADAR_INPUT_STATUS
+              .READY
+              ? "Inputs ready for deadline analysis"
+              : radarSnapshot
+                    .status ===
+                  RADAR_INPUT_STATUS
+                    .NO_OPEN_WORK
+                ? "No open work to analyse"
+                : "Study availability is missing"
+          }
+        </h2>
+
+        <span>
+          {
+            radarSnapshot
+              .status ===
+            RADAR_INPUT_STATUS
+              .READY
+              ? "Radar can now compare your open workload with deadline-specific study capacity in the next stage."
+              : radarSnapshot
+                    .status ===
+                  RADAR_INPUT_STATUS
+                    .NO_OPEN_WORK
+                ? "There are currently no open tasks creating deadline pressure."
+                : "You have open work, but Radar cannot compare it with capacity until study availability is available."
+          }
+        </span>
+      </div>
+    </section>
+  </>
+)}
     </main>
   );
 }
